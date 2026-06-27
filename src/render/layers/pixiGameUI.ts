@@ -33,31 +33,18 @@ export async function createPixiGameUI(
     gameContainer,
     shellContainer,
     render(gl: WebGL2RenderingContext, w: number, h: number) {
-      // Remet le GPU dans l'état attendu par PixiJS après le rendu Babylon
+      // Caps que renderer.resetState() ne couvre pas
       gl.disable(gl.SCISSOR_TEST)
       gl.disable(gl.STENCIL_TEST)
-      gl.disable(gl.DEPTH_TEST)
-      gl.disable(gl.CULL_FACE)
       gl.colorMask(true, true, true, true)
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-      gl.bindVertexArray(null)
-      gl.enable(gl.BLEND)
-      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA) // premultiplied alpha (PixiJS v8)
       gl.viewport(0, 0, w, h)
 
-      // Invalide les caches JS de PixiJS qui pointent vers l'état laissé par Babylon
-      const r = renderer as any
-      r.shader?.resetState?.()
-      r.geometry?.resetState?.()
-      r.texture?.resetState?.()
-      r.state?.resetState?.()
-      r.buffer?.resetState?.()
-      r.stencil?.resetState?.()
+      // Remet tous les caches JS PixiJS + l'état GL standard (blend, depth, vao…)
+      renderer.resetState()
 
       renderer.render({ container: stage, clear: false })
 
-      // Délie le VAO PixiJS — empêche Babylon de corrompre ses vertex attrib enables
-      // via wipeCaches(true) ou son propre rendu pendant que ce VAO est encore bindé.
+      // Délie le VAO — empêche Babylon de corrompre ses vertex attrib enables
       gl.bindVertexArray(null)
     },
     destroy: () => renderer.destroy(),

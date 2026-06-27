@@ -81,34 +81,24 @@ gl.bindVertexArray(null)
 
 ## Reset complet requis avant chaque rendu PixiJS
 
-En plus du unbind post-rendu, un reset GL complet est nécessaire avant chaque rendu PixiJS pour neutraliser l'état laissé par Babylon :
+En plus du unbind post-rendu, un reset est nécessaire avant chaque rendu PixiJS pour neutraliser l'état laissé par Babylon.
+
+`renderer.resetState()` (API officielle PixiJS) couvre blend, depth, VAO, caches JS, etc. Seuls 4 caps GL ne sont pas couverts et doivent être réinitialisés manuellement :
 
 ```typescript
 render(gl: WebGL2RenderingContext, w: number, h: number) {
-  // 1. Reset hardware GL state
+  // Caps que renderer.resetState() ne couvre pas
   gl.disable(gl.SCISSOR_TEST)
   gl.disable(gl.STENCIL_TEST)
-  gl.disable(gl.DEPTH_TEST)
-  gl.disable(gl.CULL_FACE)
   gl.colorMask(true, true, true, true)
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-  gl.bindVertexArray(null)
-  gl.enable(gl.BLEND)
-  gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA) // premultiplied alpha (PixiJS v8)
   gl.viewport(0, 0, w, h)
 
-  // 2. Invalider les caches JS PixiJS (pointent vers l'état Babylon)
-  const r = renderer as any
-  r.shader?.resetState?.()
-  r.geometry?.resetState?.()
-  r.texture?.resetState?.()
-  r.state?.resetState?.()
-  r.buffer?.resetState?.()
-  r.stencil?.resetState?.()
+  // Remet tous les caches JS PixiJS + l'état GL standard (blend, depth, vao…)
+  renderer.resetState()
 
   renderer.render({ container: stage, clear: false })
 
-  // 3. Délier le VAO pour protéger son état des appels Babylon suivants
+  // Délie le VAO — empêche Babylon de corrompre ses vertex attrib enables
   gl.bindVertexArray(null)
 }
 ```
