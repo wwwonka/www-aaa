@@ -1,0 +1,25 @@
+{
+	"name": "game-architecture",
+	"private": true,
+	"version": "0.0.0",
+	"type": "module",
+	"scripts": {
+		"postinstall": "chflags hidden node_modules pnpm-lock.yaml",
+		"dev": "vite",
+		"build": "tsc && vite build",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@babylonjs/core": "^9.14.0",
+		"@trystero-p2p/mqtt": "^0.25.2",
+		"comlink": "^4.4.2",
+		"pixi-filters": "^6.1.5",
+		"pixi.js": "^8.19.0",
+		"qrcode": "^1.5.4"
+	},
+	"devDependencies": {
+		"typescript": "~6.0.2",
+		"vite": "^8.1.0",
+		"vite-plugin-mkcert": "^2.1.0"
+	}
+}
