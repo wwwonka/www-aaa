@@ -1,0 +1,22 @@
+{
+  "record": {
+    "hosts": [
+      "localhost",
+      "::1",
+      "127.0.0.1",
+      "192.168.0.166",
+      "fe80::1",
+      "fe80::14e8:47c5:da0f:dbc5",
+      "fe80::844f:59ff:fea1:8693",
+      "fe80::f476:8f88:50f0:17a8",
+      "fe80::98c4:f3d5:cde8:df15",
+      "fe80::546f:510a:d452:ec38",
+      "fe80::ce81:b1c:bd2c:69e"
+    ],
+    "hash": {
+      "key": "53143af7e5a833eef22872c2bf33e2b249d8221ea2eae6ea342317b942a55113",
+      "cert": "1c2a157c2e5f63662c67da36a7beb96b454021509d87b5aeb02b830115098090"
+    }
+  },
+  "configFilePath": "/Users/julien/Desktop/Game Architecture/_dev/.mkcert/config.json"
+}

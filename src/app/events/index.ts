@@ -1,4 +1,4 @@
-import type { WorkerRefs }  from './resizeHandler'
+import type { WorkerRefs }      from './resizeHandler'
 import { setupResizeHandler }     from './resizeHandler'
 import { setupVisibilityHandler } from './visibilityHandler'
 

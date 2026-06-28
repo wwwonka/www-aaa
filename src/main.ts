@@ -1,3 +1,3 @@
-import { AppHost } from './AppHost'
+import { AppHost } from './app/AppHost'
 
 new AppHost().start()

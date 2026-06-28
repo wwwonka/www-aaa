@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink'
-import type { RenderWorkerApi } from './render/render.worker'
+import type { RenderWorkerApi } from '../render/render.worker'
 import { mountEventHandlers } from './events'
 
 // Contexte d'exécution détecté au démarrage — détermine les capacités disponibles
@@ -23,14 +23,14 @@ export class AppHost {
     const canvas = document.getElementById('canvas') as HTMLCanvasElement
 
     // Taille physique initiale avant le transfert — le worker n'a plus accès à window après
-    const dpr    = window.devicePixelRatio ?? 1
+    const dpr     = window.devicePixelRatio ?? 1
     canvas.width  = Math.round(window.innerWidth  * dpr)
     canvas.height = Math.round(window.innerHeight * dpr)
 
     const offscreen = canvas.transferControlToOffscreen()
 
     this._renderWorker = new Worker(
-      new URL('./render/render.worker.ts', import.meta.url),
+      new URL('../render/render.worker.ts', import.meta.url),
       { type: 'module' },
     )
     this.renderApi = Comlink.wrap<RenderWorkerApi>(this._renderWorker)
