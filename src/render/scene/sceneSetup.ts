@@ -15,9 +15,4 @@ export function sceneSetup(engine: Engine, scene: Scene): void {
     box.rotation.y += 0.01
   })
 
-  // OffscreenCanvas n'a pas accès à window — le main thread envoie un message 'resize'
-  // plutôt que window.addEventListener('resize')
-  self.addEventListener('message', (e) => {
-    if (e.data?.type === 'resize') engine.resize()
-  })
 }

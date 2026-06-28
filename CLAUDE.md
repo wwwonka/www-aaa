@@ -6,13 +6,14 @@
 Ne jamais proposer ni implémenter une approche avec deux canvas DOM ou deux OffscreenCanvas séparés.
 L'utilisateur veut un seul canvas visible, un seul contexte WebGL géré par PixiJS.
 
-### Architecture cible : Babylon → texture → PixiJS
-PixiJS est le compositeur maître. Babylon rend sa scène 3D dans une RenderTexture (framebuffer),
-puis PixiJS l'affiche comme un Sprite dans son propre conteneur.
+### Architecture de rendu : Babylon + PixiJS sur le même framebuffer
+Babylon rend la scène 3D en premier dans le framebuffer principal.
+PixiJS rend ensuite par-dessus avec `clearBeforeRender: false` — composition naturelle, zéro copie de texture.
+Babylon possède le canvas et le contexte WebGL. PixiJS reçoit ce même contexte GL via `createPixiGameUI(gl)`.
 
 Structure des couches (bas → haut) :
-- `GameContainer`  — Sprite affichant la RenderTexture Babylon (scène 3D)
-- `GameUI`         — UI 2D in-game (HUD, barres de vie, etc.)
-- `ShellUI`        — UI système (menus, overlays, pause screen)
+- Babylon         — scène 3D (rendu dans le framebuffer principal)
+- `gameContainer` — UI 2D in-game (HUD, barres de vie, etc.)
+- `shellContainer` — UI système (menus, overlays, pause screen)
 
-PixiJS possède le canvas et le contexte WebGL. Babylon reçoit le contexte de PixiJS (pas l'inverse).
+La RenderTexture n'est PAS utilisée — inutile tant qu'on ne veut pas manipuler le rendu Babylon comme un objet PixiJS.

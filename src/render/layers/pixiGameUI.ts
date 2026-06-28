@@ -7,6 +7,7 @@ export interface PixiGameUI {
   gameContainer:  Container
   shellContainer: Container
   render:         (gl: WebGL2RenderingContext, width: number, height: number) => void
+  resize:         (width: number, height: number) => void
   destroy:        () => void
 }
 
@@ -46,6 +47,9 @@ export async function createPixiGameUI(
 
       // Délie le VAO — empêche Babylon de corrompre ses vertex attrib enables
       gl.bindVertexArray(null)
+    },
+    resize(w: number, h: number) {
+      renderer.resize(w, h)
     },
     destroy: () => renderer.destroy(),
   }
