@@ -1,6 +1,7 @@
 import { defineConfig }          from 'vite'
 import mkcert                    from 'vite-plugin-mkcert'
 import viteOpenNetworkUrlPlugin  from './_dev/vite-open-network-url-plugin'
+import htmlIncludePlugin         from './_dev/vite-html-include-plugin'
 
 // COEP 'require-corp' est requis pour SharedArrayBuffer
 // Safari exige en plus CORP sur chaque ressource servie — sans ça les imports worker sont bloqués
@@ -12,6 +13,7 @@ const crossOriginHeaders = {
 
 export default defineConfig({
   plugins: [
+    htmlIncludePlugin(),
     mkcert({ savePath: './_dev/.mkcert' }),
     viteOpenNetworkUrlPlugin(),
   ],

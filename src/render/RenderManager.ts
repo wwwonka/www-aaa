@@ -1,4 +1,6 @@
-import { Engine, Scene }         from '@babylonjs/core'
+import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylonjs/core/pure'
+
+RegisterStandardEngineExtensions()
 import { Graphics }               from 'pixi.js'
 import { sceneSetup }             from './scene/sceneSetup'
 import { createPixiGameUI }       from './layers/pixiGameUI'
@@ -27,6 +29,7 @@ export class RenderManager {
       stencil:               true,
     })
     this._scene = new Scene(this._engine)
+    this._scene.clearColor = new Color4(0, 0, 0, 1)
 
     // Contexte pris depuis Babylon — garantit le même objet GL qu'il utilise en interne
     this._gl = (this._engine as any)._gl as WebGL2RenderingContext

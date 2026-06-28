@@ -1,4 +1,4 @@
-import { Engine, MeshBuilder, Scene, StandardMaterial, Color3 } from '@babylonjs/core'
+import { Engine, MeshBuilder, Scene, StandardMaterial, Color3 } from '@babylonjs/core/pure'
 import { createCamera } from './camera'
 import { createLights } from './lights'
 
