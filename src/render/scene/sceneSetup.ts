@@ -2,7 +2,7 @@ import { Engine, MeshBuilder, Scene, StandardMaterial, Color3 } from '@babylonjs
 import { createCamera } from './camera'
 import { createLights } from './lights'
 
-export function sceneSetup(engine: Engine, scene: Scene): void {
+export function sceneSetup(_engine: Engine, scene: Scene): void {
   createCamera(scene)
   createLights(scene)
 

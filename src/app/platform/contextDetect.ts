@@ -10,6 +10,15 @@ export interface RuntimeContext {
   category: RuntimeCategory
 }
 
+function detectBrowserName(ua: string): string {
+  if (/Firefox/.test(ua))                                      return 'Firefox'
+  if (/Edg\//.test(ua))                                        return 'Edge'
+  if (/OPR\/|Opera/.test(ua))                                  return 'Opera'
+  if (/Chrome|Chromium|CriOS/.test(ua))                        return 'Chrome'
+  if (/Safari/.test(ua) && !/Chrome|Chromium/.test(ua))        return 'Safari'
+  return 'Unknown'
+}
+
 const CATEGORY_LABELS: Record<RuntimeCategory, string> = {
   'browser-tab':          'Browser Tab',
   'pwa-desktop-chromium': 'PWA Chromium (Desktop)',
@@ -28,10 +37,12 @@ export function detectRuntimeContext(): RuntimeContext {
     'display-mode: window-controls-overlay':  matchMedia('(display-mode: window-controls-overlay)').matches,
     'navigator.standalone (iOS)':             (navigator as any).standalone === true,
     "'windowControlsOverlay' in navigator":   'windowControlsOverlay' in navigator,
-    'UA: iPhone/iPad':                        /iPhone|iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1),
-    'UA: Android':                            /Android/.test(ua),
+    'UA: Chromium (desktop)':                 /Chrome|Chromium|Edg|OPR/.test(ua) && !/Android|iPhone|iPad|CriOS/.test(ua),
     'UA: Firefox':                            /Firefox/.test(ua),
     'UA: Safari (desktop)':                   /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR/.test(ua),
+    'UA: Chrome (mobile)':                    /CriOS|Chrome/.test(ua) && /Android|iPhone|iPad/.test(ua),
+    'UA: Android':                            /Android/.test(ua),
+    'UA: iPhone/iPad':                        /iPhone|iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1),
   }
 
   const isInstalled = !signals['display-mode: browser'] || signals['navigator.standalone (iOS)']
@@ -56,7 +67,10 @@ export function detectRuntimeContext(): RuntimeContext {
     import('../../_dev/logger').then(({ createGroupLogger }) => {
       const log = createGroupLogger('runtime-context', '#e8590c')
       const nameWidth = Math.max(...Object.keys({ isInstalled, ...signals }).map((k) => k.length))
-      log.group(CATEGORY_LABELS[category])
+      const label = category === 'browser-tab'
+        ? `Browser Tab (${detectBrowserName(ua)})`
+        : CATEGORY_LABELS[category]
+      log.group(label)
       for (const [name, value] of Object.entries({ isInstalled, ...signals })) {
         log.row(name, value, nameWidth)
       }

@@ -6,7 +6,7 @@ import { detectRuntimeContext }  from './platform/contextDetect'
 
 export class AppHost {
   async start(): Promise<void> {
-    const ctx = detectRuntimeContext()
+    detectRuntimeContext()
     installBrowserGuards()
 
     const canvas = document.getElementById('canvas') as HTMLCanvasElement

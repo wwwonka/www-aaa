@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import path from 'node:path'
+import path              from 'node:path'
+import type { Plugin }   from 'vite'
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const INCLUDE_RE = /<!--\s*@include\s+(\S+)\s*-->/g
@@ -13,15 +14,15 @@ const INCLUDE_RE = /<!--\s*@include\s+(\S+)\s*-->/g
 // processing (asset URL rewriting, ViteMinifyPlugin) ever sees it. Includes
 // are resolved relative to index.html's own directory, recursively, so a
 // fragment can itself `@include` another fragment.
-function resolveIncludes(html, fromDir) {
-  return html.replace(INCLUDE_RE, (_match, relPath) => {
+function resolveIncludes(html: string, fromDir: string): string {
+  return html.replace(INCLUDE_RE, (_match, relPath: string) => {
     const filePath = path.join(fromDir, relPath)
     const fragment = readFileSync(filePath, 'utf-8')
     return resolveIncludes(fragment, path.dirname(filePath))
   })
 }
 
-export default function htmlIncludePlugin() {
+export default function htmlIncludePlugin(): Plugin {
   return {
     name: 'vite-html-include-plugin',
     transformIndexHtml(html) {
