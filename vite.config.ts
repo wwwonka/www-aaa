@@ -16,34 +16,9 @@ const crossOriginHeaders = {
 };
 
 export default defineConfig({
-<<<<<<< Updated upstream
-  plugins: [
-    htmlIncludePlugin(),
-    mkcert({ savePath: './_dev/.mkcert', hosts: [bonjourHost] }),
-    viteOpenLocalIpPlugin(),
-    ViteMinifyPlugin(),
-    minifyManifestPlugin(),
-  ],
-  server:  {
-    host:         true,
-    https:        true,
-    // cloudflared quick-tunnel (*.trycloudflare.com) n'est pas une IP LAN ni localhost —
-    // Vite rejetterait la requête avec "This host is not allowed" sans cette entrée
-    allowedHosts: ['.trycloudflare.com'],
-    headers:      crossOriginHeaders,
-    // Les adresses .local (mDNS) ne sont pas résolues fiablement par les browsers pour les WebSockets
-    hmr: { host: bonjourHost, protocol: 'wss' },
-  },
-  preview: { headers: crossOriginHeaders },
-  worker:  { format: 'es' },
-})
-=======
 	plugins: [
 		htmlIncludePlugin(),
-		mkcert({
-			savePath: "./_dev/.mkcert",
-			hosts: [bonjourHost],
-		}),
+		mkcert({savePath: "./_dev/.mkcert", hosts: [bonjourHost]}),
 		viteOpenLocalIpPlugin(),
 		ViteMinifyPlugin(),
 		minifyManifestPlugin(),
@@ -51,11 +26,13 @@ export default defineConfig({
 	server: {
 		host: true,
 		https: true,
+		// cloudflared quick-tunnel (*.trycloudflare.com) n'est pas une IP LAN ni localhost —
+		// Vite rejetterait la requête avec "This host is not allowed" sans cette entrée
 		allowedHosts: [".trycloudflare.com"],
 		headers: crossOriginHeaders,
+		// Les adresses .local (mDNS) ne sont pas résolues fiablement par les browsers pour les WebSockets
 		hmr: {host: "localhost", protocol: "wss"},
 	},
 	preview: {headers: crossOriginHeaders},
 	worker: {format: "es"},
 });
->>>>>>> Stashed changes
