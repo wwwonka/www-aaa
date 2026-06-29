@@ -2,17 +2,18 @@ import * as Comlink from 'comlink'
 import type { RenderWorkerApi }           from '../render/render.worker'
 import { mountEventHandlers }             from './events/_index'
 import { installBrowserGuards }           from './browser-guards/_index'
-import { detectRuntimeContext }           from './platform/contextDetect'
+import { detectAppContext }               from './platform/ContextManager'
 import { appActor, startAppStateMachine } from '../core/AppStateMachine'
 
 export class AppHost {
   async start(): Promise<void> {
-    const ctx = detectRuntimeContext()
+    const ctx = detectAppContext()
     if (import.meta.env.DEV) {
       import('../_dev/logger').then(({ createGroupLogger }) => {
         const log = createGroupLogger('AppHost', '#2c3e50')
-        log.group(ctx.category)
-        log.row('category', ctx.category)
+        log.group(`${ctx.platform} | ${ctx.role}`)
+        log.row('platform', ctx.platform)
+        log.row('role',     ctx.role)
         log.groupEnd()
       })
     }
