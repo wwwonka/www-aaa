@@ -28,6 +28,8 @@ export default defineConfig({
     // Vite rejetterait la requête avec "This host is not allowed" sans cette entrée
     allowedHosts: ['.trycloudflare.com'],
     headers:      crossOriginHeaders,
+    // Les adresses .local (mDNS) ne sont pas résolues fiablement par les browsers pour les WebSockets
+    hmr: { host: bonjourHost, protocol: 'wss' },
   },
   preview: { headers: crossOriginHeaders },
   worker:  { format: 'es' },
