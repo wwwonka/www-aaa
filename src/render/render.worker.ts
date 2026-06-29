@@ -1,5 +1,6 @@
 import * as Comlink from 'comlink'
 import { RenderManager } from './RenderManager'
+import type { AppState } from '../core/AppStateMachine'
 
 const manager = new RenderManager()
 
@@ -10,6 +11,10 @@ const api = {
 
   setFps(fps: number): void {
     manager.setFps(fps)
+  },
+
+  showScreen(state: AppState): void {
+    manager.showScreen(state)
   },
 
   dispose(): void {

@@ -1,11 +1,12 @@
 import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylonjs/core/pure'
 
 RegisterStandardEngineExtensions()
-import { Graphics }               from 'pixi.js'
+import { Graphics, BlurFilter }   from 'pixi.js'
 import { sceneSetup }             from './scene/sceneSetup'
 import { createUIRenderer }       from './layers/uiRenderer'
 import type { UIRenderer }        from './layers/uiRenderer'
 import { startRenderLoop }        from './renderLoop'
+import type { AppState }          from '../core/AppStateMachine'
 
 export class RenderManager {
   private _canvas!:        OffscreenCanvas
@@ -85,6 +86,16 @@ export class RenderManager {
     this._targetFps = fps
     this._stopLoop()
     this._stopLoop = startRenderLoop(() => this._frame(), fps)
+  }
+
+  showScreen(state: AppState): void {
+    const blur = this._gameUI.gameUI.filters?.find(f => f instanceof BlurFilter)
+
+    if (state === 'PAUSED') {
+      if (!blur) this._gameUI.gameUI.filters = [new BlurFilter({ strength: 8 })]
+    } else {
+      this._gameUI.gameUI.filters = []
+    }
   }
 
   dispose(): void {

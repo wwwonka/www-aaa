@@ -1,13 +1,21 @@
 import * as Comlink from 'comlink'
-import type { RenderWorkerApi }  from '../render/render.worker'
-import { mountEventHandlers }    from './events/_index'
-import { installBrowserGuards }  from './browser-guards/_index'
-import { detectAppContext }       from './platform/ContextManager'
+import type { RenderWorkerApi }           from '../render/render.worker'
+import { mountEventHandlers }             from './events/_index'
+import { installBrowserGuards }           from './browser-guards/_index'
+import { detectRuntimeContext }           from './platform/contextDetect'
+import { appActor, startAppStateMachine } from '../core/AppStateMachine'
 
 export class AppHost {
   async start(): Promise<void> {
-    const ctx = detectAppContext()
-    console.log('[AppHost] platform:', ctx.platform, '| role:', ctx.role, '| runtime:', ctx.runtime)
+    const ctx = detectRuntimeContext()
+    if (import.meta.env.DEV) {
+      import('../_dev/logger').then(({ createGroupLogger }) => {
+        const log = createGroupLogger('AppHost', '#2c3e50')
+        log.group(ctx.category)
+        log.row('category', ctx.category)
+        log.groupEnd()
+      })
+    }
 
     installBrowserGuards()
 
@@ -27,6 +35,20 @@ export class AppHost {
     const renderApi = Comlink.wrap<RenderWorkerApi>(renderWorker)
 
     await renderApi.init(Comlink.transfer(offscreen, [offscreen]))
+
+    // Branche l'ASM — chaque transition d'état met à jour le render worker
+    appActor.subscribe(snapshot => {
+      renderApi.showScreen(snapshot.value as any)
+    })
+    startAppStateMachine()
+
+    // Enter toggle pause / resume
+    window.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return
+      const state = appActor.getSnapshot().value
+      if (state === 'IN_GAME') appActor.send({ type: 'PAUSE' })
+      else if (state === 'PAUSED') appActor.send({ type: 'RESUME' })
+    })
 
     mountEventHandlers({ canvas, renderWorker })
   }
