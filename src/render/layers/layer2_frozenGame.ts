@@ -1,4 +1,4 @@
-import { Container, Sprite, Texture, TextureSource } from 'pixi.js'
+import { Container, Sprite, Texture } from 'pixi.js'
 import { KawaseBlurFilter } from 'pixi-filters'
 
 export interface FrozenGameLayer {
@@ -34,8 +34,13 @@ export function createFrozenGameLayer(): FrozenGameLayer {
       gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null)
       gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
 
-      const source  = new TextureSource({ resource: flipY(pixels, width, height), width, height })
-      const texture = new Texture({ source })
+      // OffscreenCanvas → ImageBitmap : seul format que PixiJS v8 comprend dans un worker
+      const offscreen = new OffscreenCanvas(width, height)
+      const ctx       = offscreen.getContext('2d')!
+      const flipped = flipY(pixels, width, height)
+      ctx.putImageData(new ImageData(new Uint8ClampedArray(flipped.buffer as ArrayBuffer), width, height), 0, 0)
+      const bitmap  = offscreen.transferToImageBitmap()
+      const texture = Texture.from(bitmap)
 
       filter  = new KawaseBlurFilter({ strength: 0, quality: 4 })
       sprite  = new Sprite(texture)
