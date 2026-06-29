@@ -2,11 +2,13 @@ import * as Comlink from 'comlink'
 import type { RenderWorkerApi }  from '../render/render.worker'
 import { mountEventHandlers }    from './events/_index'
 import { installBrowserGuards }  from './browser-guards/_index'
-import { detectRuntimeContext }  from './platform/contextDetect'
+import { detectAppContext }       from './platform/ContextManager'
 
 export class AppHost {
   async start(): Promise<void> {
-    detectRuntimeContext()
+    const ctx = detectAppContext()
+    console.log('[AppHost] platform:', ctx.platform, '| role:', ctx.role, '| runtime:', ctx.runtime)
+
     installBrowserGuards()
 
     const canvas = document.getElementById('canvas') as HTMLCanvasElement
