@@ -1,15 +1,26 @@
 {
-  "hooks": {
-	"TaskCreated": [
-	  {
-		"hooks": [
-		  {
-			"type": "command",
-			"command": "jq -r '\"\\(.title)\\n\\(.description // \"\")\"' | { IFS= read -r title; IFS= read -r body; gh issue create --repo wwwonka/www-aaa --title \"$title\" --body \"${body:-No description}\"; } 2>/dev/null || true",
-			"statusMessage": "Creating GitHub issue..."
-		  }
+	"hooks": {
+		"TaskCreated": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": "jq -r '\"\\(.title)\\n\\(.description // \"\")\"' | { IFS= read -r title; IFS= read -r body; gh issue create --repo wwwonka/www-aaa --title \"$title\" --body \"${body:-No description}\"; } 2>/dev/null || true",
+						"statusMessage": "Creating GitHub issue..."
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "jq -r '.tool_input.command' | grep -qE 'pnpm (i |install|add)' && chflags hidden pnpm-lock.yaml 2>/dev/null || true"
+					}
+				]
+			}
 		]
-	  }
-	]
-  }
+	}
 }

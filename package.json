@@ -4,7 +4,7 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"postinstall": "chflags hidden node_modules pnpm-lock.yaml",
+		"postinstall": "( sleep 1 && chflags hidden node_modules && chflags hidden pnpm-lock.yaml 2>/dev/null ) &",
 		"dev": "vite",
 		"build": "tsc && vite build",
 		"preview": "vite preview"
@@ -13,6 +13,7 @@
 		"@babylonjs/core": "^9.14.0",
 		"@trystero-p2p/mqtt": "^0.25.2",
 		"comlink": "^4.4.2",
+		"kill-port": "^2.0.1",
 		"pixi-filters": "^6.1.5",
 		"pixi.js": "^8.19.0",
 		"qrcode": "^1.5.4"
