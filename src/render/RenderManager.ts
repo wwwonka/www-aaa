@@ -72,7 +72,7 @@ export class RenderManager {
 
     // Rectangle de debug — à retirer une fois le rendu PixiJS stabilisé
     const debug = new Graphics().rect(50, 50, 120, 40).fill(0xff0000)
-    this._gameUI.gameContainer.addChild(debug)
+    this._gameUI.gameUI.addChild(debug)
   }
 
   private _frame(): void {

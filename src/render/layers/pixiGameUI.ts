@@ -1,11 +1,15 @@
 import { WebGLRenderer, Container, DOMAdapter, WebWorkerAdapter } from 'pixi.js'
+import { createGameUI }         from './gameUI'
+import { createOverlayUI }      from './overlayUI'
+import { createNotificationUI } from './notificationUI'
 
 // WebWorkerAdapter — requis avant toute création PixiJS dans un worker (pas de document/window)
 DOMAdapter.set(WebWorkerAdapter)
 
 export interface PixiGameUI {
-  gameContainer:  Container
-  shellContainer: Container
+  gameUI:         Container
+  overlayUI:      Container
+  notificationUI: Container
   render:         (gl: WebGL2RenderingContext, width: number, height: number) => void
   resize:         (width: number, height: number) => void
   destroy:        () => void
@@ -26,13 +30,15 @@ export async function createPixiGameUI(
   } as any)
 
   const stage          = new Container()
-  const gameContainer  = new Container()
-  const shellContainer = new Container()
-  stage.addChild(gameContainer, shellContainer)
+  const gameUI         = createGameUI()
+  const overlayUI      = createOverlayUI()
+  const notificationUI = createNotificationUI()
+  stage.addChild(gameUI, overlayUI, notificationUI)
 
   return {
-    gameContainer,
-    shellContainer,
+    gameUI,
+    overlayUI,
+    notificationUI,
     render(gl: WebGL2RenderingContext, w: number, h: number) {
       // Caps que renderer.resetState() ne couvre pas
       gl.disable(gl.SCISSOR_TEST)
