@@ -6,7 +6,7 @@ import { createNotificationUI } from './notificationUI'
 // WebWorkerAdapter — requis avant toute création PixiJS dans un worker (pas de document/window)
 DOMAdapter.set(WebWorkerAdapter)
 
-export interface PixiGameUI {
+export interface UIRenderer {
   gameUI:         Container
   overlayUI:      Container
   notificationUI: Container
@@ -15,11 +15,11 @@ export interface PixiGameUI {
   destroy:        () => void
 }
 
-export async function createPixiGameUI(
+export async function createUIRenderer(
   gl:     WebGL2RenderingContext,
   width:  number,
   height: number,
-): Promise<PixiGameUI> {
+): Promise<UIRenderer> {
   const renderer = new WebGLRenderer()
   await renderer.init({
     context:           gl,

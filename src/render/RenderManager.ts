@@ -3,8 +3,8 @@ import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylo
 RegisterStandardEngineExtensions()
 import { Graphics }               from 'pixi.js'
 import { sceneSetup }             from './scene/sceneSetup'
-import { createPixiGameUI }       from './layers/pixiGameUI'
-import type { PixiGameUI }        from './layers/pixiGameUI'
+import { createUIRenderer }       from './layers/uiRenderer'
+import type { UIRenderer }        from './layers/uiRenderer'
 import { startRenderLoop }        from './renderLoop'
 
 export class RenderManager {
@@ -12,7 +12,7 @@ export class RenderManager {
   private _engine!:        Engine
   private _scene!:         Scene
   private _gl!:            WebGL2RenderingContext
-  private _gameUI!:        PixiGameUI
+  private _gameUI!:        UIRenderer
   private _width!:         number
   private _height!:        number
   private _targetFps!:     number
@@ -34,7 +34,7 @@ export class RenderManager {
     // Contexte pris depuis Babylon — garantit le même objet GL qu'il utilise en interne
     this._gl = (this._engine as any)._gl as WebGL2RenderingContext
 
-    this._gameUI = await createPixiGameUI(this._gl, this._width, this._height)
+    this._gameUI = await createUIRenderer(this._gl, this._width, this._height)
 
     await this._setupScene()
     this._targetFps = targetFps
