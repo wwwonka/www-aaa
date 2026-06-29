@@ -15,7 +15,7 @@ export interface UIRenderer {
   overlayUI:      Container
   notificationUI: Container
   renderNormal:   (gl: WebGL2RenderingContext, w: number, h: number) => void
-  renderSplit:    (gl: WebGL2RenderingContext, w: number, h: number) => void
+  renderSplit:    (gl: WebGL2RenderingContext, w: number, h: number, liveCapture: boolean) => void
   resize:         (width: number, height: number) => void
   destroy:        () => void
 }
@@ -60,12 +60,15 @@ export async function createUIRenderer(
     // Passe 1 : gameUI → framebuffer (composite avec Babylon)
     // Capture → texture GL
     // Passe 2 : frozenGame + overlay + notifications par-dessus
-    renderSplit(gl: WebGL2RenderingContext, w: number, h: number) {
+    renderSplit(gl: WebGL2RenderingContext, w: number, h: number, liveCapture: boolean) {
       gl.viewport(0, 0, w, h)
       renderer.resetState()
 
       // Passe 1 — gameUI sur Babylon
       renderer.render({ container: gameUI, clear: false })
+
+      // En RESUMING : capture le frame live (Babylon qui tourne + gameUI) à chaque frame
+      if (liveCapture) frozenGame.captureFrame(gl, w, h)
 
       // Passe 2 — blur + overlay + notifications
       renderer.resetState()

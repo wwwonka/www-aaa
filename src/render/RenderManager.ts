@@ -124,7 +124,8 @@ export class RenderManager {
     this._pauseBlur.update(delta)
 
     if (this._pauseBlur.isActive) {
-      this._ui.renderSplit(this._gl, this._width, this._height)
+      const liveCapture = this._pauseBlur.mode === 'resuming'
+      this._ui.renderSplit(this._gl, this._width, this._height, liveCapture)
     } else {
       this._ui.renderNormal(this._gl, this._width, this._height)
     }
