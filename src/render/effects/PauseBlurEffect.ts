@@ -61,7 +61,7 @@ export class PauseBlurEffect {
       this._strength = (1 - easeIn(t)) * MAX_STRENGTH
       this._frozen.setStrength(this._strength)
       if (t >= 1) {
-        this._frozen.deactivate(this._gl)
+        this._frozen.deactivate()
         this._mode = 'normal'
       }
     }
@@ -69,7 +69,7 @@ export class PauseBlurEffect {
 
   resize(width: number, height: number): void {
     if (this.isActive) {
-      this._frozen.deactivate(this._gl)
+      this._frozen.deactivate()
       this._frozen.activate(this._gl, width, height)
       this._frozen.setStrength(this._strength)
     }
