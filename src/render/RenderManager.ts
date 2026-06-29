@@ -43,7 +43,7 @@ export class RenderManager {
 
     this._pauseBlur = new PauseBlurEffect(
       this._ui.frozenGame,
-      this._ui.renderer,
+      this._gl,
       () => this._width,
       () => this._height,
     )

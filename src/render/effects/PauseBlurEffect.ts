@@ -1,5 +1,4 @@
 import type { FrozenGameLayer } from '../layers/layer2_frozenGame'
-import type { WebGLRenderer }   from 'pixi.js'
 
 type RenderMode = 'normal' | 'pausing' | 'frozen' | 'resuming'
 
@@ -12,7 +11,7 @@ function easeIn(t: number):  number { return t * t }
 
 export class PauseBlurEffect {
   private _frozen:   FrozenGameLayer
-  private _renderer: WebGLRenderer
+  private _gl:       WebGL2RenderingContext
   private _width:    () => number
   private _height:   () => number
   private _mode:     RenderMode = 'normal'
@@ -20,22 +19,22 @@ export class PauseBlurEffect {
   private _strength: number     = 0
 
   constructor(
-    frozen:   FrozenGameLayer,
-    renderer: WebGLRenderer,
-    width:    () => number,
-    height:   () => number,
+    frozen: FrozenGameLayer,
+    gl:     WebGL2RenderingContext,
+    width:  () => number,
+    height: () => number,
   ) {
-    this._frozen   = frozen
-    this._renderer = renderer
-    this._width    = width
-    this._height   = height
+    this._frozen = frozen
+    this._gl     = gl
+    this._width  = width
+    this._height = height
   }
 
   get mode(): RenderMode  { return this._mode }
   get isActive(): boolean { return this._mode !== 'normal' }
 
   enter(): void {
-    this._frozen.activate(this._renderer, this._width(), this._height())
+    this._frozen.activate(this._gl, this._width(), this._height())
     this._elapsed = 0
     this._mode    = 'pausing'
   }
@@ -62,7 +61,7 @@ export class PauseBlurEffect {
       this._strength = (1 - easeIn(t)) * MAX_STRENGTH
       this._frozen.setStrength(this._strength)
       if (t >= 1) {
-        this._frozen.deactivate()
+        this._frozen.deactivate(this._gl)
         this._mode = 'normal'
       }
     }
@@ -70,8 +69,8 @@ export class PauseBlurEffect {
 
   resize(width: number, height: number): void {
     if (this.isActive) {
-      this._frozen.deactivate()
-      this._frozen.activate(this._renderer, width, height)
+      this._frozen.deactivate(this._gl)
+      this._frozen.activate(this._gl, width, height)
       this._frozen.setStrength(this._strength)
     }
   }

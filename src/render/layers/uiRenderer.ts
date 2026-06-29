@@ -67,10 +67,9 @@ export async function createUIRenderer(
       // Passe 1 — gameUI sur Babylon
       renderer.render({ container: gameUI, clear: false })
 
-      // Capture du composite Babylon + gameUI dans la texture du frozenGame
-      const texture = (frozenGame.container.children[0] as any)?._texture?.source?.resource
-      if (texture) {
-        gl.bindTexture(gl.TEXTURE_2D, texture)
+      // Capture du composite Babylon + gameUI dans la texture GL du frozenGame
+      if (frozenGame.glTexture) {
+        gl.bindTexture(gl.TEXTURE_2D, frozenGame.glTexture)
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, w, h, 0)
         gl.bindTexture(gl.TEXTURE_2D, null)
       }
