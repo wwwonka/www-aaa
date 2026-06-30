@@ -62,14 +62,16 @@ src/app/
   AppHost.ts            ← lit la stratégie, délègue, ne sait plus si unifié ou dédié
 ```
 
-## ⚠️ Mise à jour — `assetsManager.worker.ts` n'est pas dans cette hiérarchie
+## Résolu (partiellement) — `SystemAllocator` couvre AssetsManager
 
-Un worker dédié pour l'AssetsManager existe déjà (`src/core/assetsManager.worker.ts`, voir
-`docs/assets-manager.md`) — codé en dur (`new Worker(...)` dans `AppHost.ts`), pas soumis à la
-stratégie adaptive ci-dessus. Sur un appareil à 2 cœurs, on a donc déjà 3 threads (Main + Render +
-AssetsManager) sans même compter Simulation/Audio pas encore implémentés — exactement le scénario que
-ce doc met en garde. À trancher avant d'ajouter d'autres workers dédiés : soit l'AssetsManager rejoint
-un worker partagé en mode dégradé, soit la hiérarchie de décision ci-dessus doit compter tous les
-systèmes (pas seulement render/simulation/audio) pour rester valide.
+`assetsManager.worker.ts` (codé en dur) n'existe plus, remplacé par `src/core/SystemHost.worker.ts`
+(générique, multiplexage lazy `get(id)`) piloté par `src/core/SystemAllocator.ts` — voir
+`docs/system-allocator.md` pour le détail. La règle N-1 décrite ci-dessus y est implémentée pour
+les systèmes "agiles" (AssetsManager aujourd'hui).
 
-Non implémenté — à faire après que la simulation et le render soient fonctionnels et profilés.
+Reste non couvert : la hiérarchie render/simulation/audio (1/2/3 workers selon
+`hardwareConcurrency`) décrite plus haut dans ce doc n'est pas encore implémentée — Simulation et
+Audio sont toujours des stubs `console.log`, rien à allouer. `SystemAllocator` ne gère pour
+l'instant qu'une décision binaire (un seul système agile, worker vs inline) ; le regroupement
+multi-systèmes dans un même host reste à concevoir quand Simulation/Audio/Network deviendront de
+vrais systèmes.

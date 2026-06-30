@@ -108,7 +108,13 @@
 │  AssetsManager.ts    — warm-up IDB des assets statiques (voir doc dédiée)│
 │  assetDb.ts          — wrapper IndexedDB natif, DB AssetsDB             │
 │  assetPath.ts        — (namespace,type,filename) → chemin réel          │
-│  assetsManager.worker.ts — expose AssetsManager via Comlink, worker dédié│
+│  SystemAllocator.ts  — décide worker vs inline pour les systèmes agiles │
+│                         selon hardwareConcurrency (règle N-1)           │
+│  SystemHost.worker.ts — host générique, multiplexage lazy get(id)      │
+│                         (remplace assetsManager.worker.ts)              │
+│  systems/                                                               │
+│    SystemLifecycle.ts — interface startUp()/shutDown() commune         │
+│    registry.ts        — SystemId → factory (assetsManager aujourd'hui) │
 │  gameLoop.ts         — boucle de simulation principale  — 🚧 stub       │
 │  sab-manager.ts      — alloue et slice le SharedArrayBuffer global      │
 │                         (matrixBytes + stateBytes + audioBytes)         │

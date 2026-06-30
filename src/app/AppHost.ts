@@ -5,7 +5,10 @@ import { installBrowserGuards }           from './browser-guards/_index'
 import { detectAppContext }               from './platform/ContextManager'
 import { registerServiceWorker }          from './platform/serviceWorkerRegister'
 import { appOrchestrator }                from '../core/AppOrchestrator'
+import { createAssetsManager }            from '../core/AssetsManager'
 import type { AssetsManagerApi }          from '../core/AssetsManager'
+import { allocateSystems }                from '../core/SystemAllocator'
+import type { SystemHostApi }             from '../core/SystemHost.worker'
 
 export class AppHost {
   async start(): Promise<void> {
@@ -13,14 +16,21 @@ export class AppHost {
     installBrowserGuards()
     registerServiceWorker(ctx.runtime)
 
-    // Worker dédié (pas le render worker) — le warm-up (transactions IDB + fetch par asset)
-    // ne doit pas se battre pour les ticks JS du main thread pendant que Babylon/PixiJS
-    // bootstrapent, ni pour ceux du render worker pendant qu'il compile ses shaders.
-    const assetsWorker = new Worker(
-      new URL('../core/assetsManager.worker.ts', import.meta.url),
-      { type: 'module' },
-    )
-    const assetsManager = Comlink.wrap<AssetsManagerApi>(assetsWorker)
+    // SystemAllocator décide si les systèmes "agiles" (AssetsManager aujourd'hui) tournent dans
+    // un SystemHost worker dédié ou inline sur le main thread, selon hardwareConcurrency et la
+    // règle N-1 — voir docs/system-allocator.md. Sur les appareils avec assez de cœurs, ça évite
+    // au warm-up (transactions IDB + fetch par asset) de se battre pour les ticks JS du main
+    // thread pendant que Babylon/PixiJS bootstrapent, ni pour ceux du render worker pendant
+    // qu'il compile ses shaders ; sur les appareils à peu de cœurs, ça évite un 3ᵉ thread inutile.
+    const allocation = allocateSystems(navigator.hardwareConcurrency, ['assetsManager'] as const)
+    const assetsManager: AssetsManagerApi =
+      allocation.mode === 'worker'
+        ? (await Comlink.wrap<SystemHostApi>(
+            // name: visible dans l'onglet Threads/Workers de Safari Web Inspector et Chrome
+            // DevTools — sans ça, le worker n'apparaît que sous l'URL du fichier .worker.ts.
+            new Worker(new URL('../core/SystemHost.worker.ts', import.meta.url), { type: 'module', name: 'SystemHostWorker' }),
+          ).get('assetsManager')) as unknown as AssetsManagerApi
+        : createAssetsManager()
 
     // TODO: séquencer namespace 'app' (menu) puis 'game' (simulation) une fois le
     // chargement granulaire piloté par AppOrchestrator — pour l'instant tout d'un coup.
@@ -37,7 +47,7 @@ export class AppHost {
 
     const renderWorker = new Worker(
       new URL('../render/render.worker.ts', import.meta.url),
-      { type: 'module' },
+      { type: 'module', name: 'RenderWorker' },
     )
     const renderApi = Comlink.wrap<RenderWorkerApi>(renderWorker)
 

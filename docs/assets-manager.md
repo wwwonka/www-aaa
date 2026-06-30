@@ -140,41 +140,34 @@ SW générique, pas spécifique PWA) :
 propre dossier — il ne voit alors AUCUNE requête de page. L'enregistrement "réussit" sans erreur
 visible ; seul `navigator.serviceWorker.getRegistrations()` le révèle.
 
-## Worker dédié — pourquoi `AssetsManager` ne tourne pas sur le main thread
+## Worker dédié (conditionnel) — pourquoi `AssetsManager` évite le main thread quand possible
 
-`src/core/assetsManager.worker.ts` expose `createAssetsManager()` via `Comlink.expose`. `AppHost.ts`
-fait `Comlink.wrap<AssetsManagerApi>(worker)` au lieu d'appeler `createAssetsManager()` directement.
+`src/core/SystemHost.worker.ts` expose `createAssetsManager()` (via le registre
+`src/core/systems/registry.ts`) en multiplexage lazy `get(id)`, derrière `Comlink.expose`.
+`AppHost.ts` choisit entre `Comlink.wrap<SystemHostApi>(worker).get('assetsManager')` et un appel
+direct à `createAssetsManager()` selon la décision de `SystemAllocator` (`docs/system-allocator.md`)
+— plus un `new Worker()` codé en dur systématique.
 
-**Pourquoi** : `warmUp()` est fire-and-forget dans `AppHost.ts` (jamais `await`), donc il tournait
-*en même temps* que le bootstrap du render worker (transfert OffscreenCanvas, handshake Comlink,
-compilation de shaders Babylon/PixiJS) — ses transactions IDB séquentielles et ses comparaisons de
-hash par asset consommaient des ticks JS sur le main thread exactement pendant la fenêtre la plus
-sensible en latence. L'architecture 100%-Promise de `AssetsManagerApi` rend ce déplacement gratuit :
-même factory, juste exposée via Comlink plutôt qu'appelée en process.
+**Pourquoi le worker reste préférable quand un slot est disponible** : `warmUp()` est
+fire-and-forget dans `AppHost.ts` (jamais `await`), donc il tournait *en même temps* que le
+bootstrap du render worker (transfert OffscreenCanvas, handshake Comlink, compilation de shaders
+Babylon/PixiJS) — ses transactions IDB séquentielles et ses comparaisons de hash par asset
+consommaient des ticks JS sur le main thread exactement pendant la fenêtre la plus sensible en
+latence. L'architecture 100%-Promise de `AssetsManagerApi` rend ce déplacement gratuit dans les
+deux sens : même factory, juste exposée via Comlink ou appelée en process selon le mode choisi.
 
 Vérifié : `criticalReady` (propriété `Promise`, pas une méthode) se résout correctement à travers la
 frontière Comlink — Comlink awaite les valeurs thenable avant d'envoyer la réponse, donc
 `await remote.criticalReady` fonctionne.
 
-## ⚠️ Question ouverte — rigidité du placement worker-par-worker
+## Résolu — placement piloté par SystemAllocator
 
-**Pas encore résolu, signalé en fin de session précédente.** Le pattern actuel (un système =
-`new Worker()` dédié, codé en dur) est exactement ce que `docs/worker-adaptive-strategy.md` met en
-garde : sur un appareil à peu de cœurs, créer un worker par système sature le CPU en context
-switching. `assetsManager.worker.ts` est un **3ᵉ worker non comptabilisé** dans la hiérarchie décrite
-par `worker-adaptive-strategy.md` (qui ne parle que de render/simulation/audio) ni dans
-`docs/threading-model.md` ("décision : 4 threads (pas 5)" — Main + Simulation + Render + Audio,
-AssetsManager absent de cette liste).
-
-Direction envisagée (non conçue en détail) : généraliser le pattern factory déjà en place
-(`createAssetsManager()`, `createX()`) avec une couche d'allocation dynamique basée sur
-`navigator.hardwareConcurrency` — un worker générique "system host" capable d'instancier plusieurs
-systèmes légers ensemble selon ce qui est assigné au runtime, plutôt qu'un fichier `*.worker.ts`
-dédié par système. `render.worker.ts` resterait probablement à part (Babylon/PixiJS lourds, bien
-définis ensemble) ; `assetsManager.worker.ts` et les futurs systèmes légers (réseau, audio) seraient
-candidats à se faire regrouper dynamiquement.
-
-**À reprendre en premier dans la prochaine session si on retravaille sur les workers.**
+`assetsManager.worker.ts` (codé en dur, 3ᵉ worker non comptabilisé) a été remplacé par
+`src/core/SystemHost.worker.ts` (générique, lazy `get(id)`) piloté par
+`src/core/SystemAllocator.ts`. AssetsManager tourne maintenant dans un worker dédié **ou** inline
+sur le main thread selon `navigator.hardwareConcurrency` et la règle N-1. Le warm-up off-main-thread
+décrit ci-dessous reste vrai quand le mode choisi est `'worker'` — seul le *comment* il y arrive a
+changé. Détail complet : `docs/system-allocator.md`.
 
 ## Renommages d'architecture associés (même session)
 

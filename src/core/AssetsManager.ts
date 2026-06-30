@@ -1,6 +1,7 @@
 import { openAssetDb, getAsset, putAsset } from './assetDb'
 import { assetPath }                       from './assetPath'
 import type { AssetNamespace, AssetManifest } from '../../_dev/vite-asset-manifest-plugin'
+import type { SystemLifecycle }            from './systems/SystemLifecycle'
 
 interface FlatEntry {
   path:      string
@@ -35,7 +36,7 @@ export type AssetLoadEvent =
   | { type: 'complete' }
   | { type: 'error';    path: string; error: string }
 
-export interface AssetsManagerApi {
+export interface AssetsManagerApi extends SystemLifecycle {
   /**
    * Fetches the build manifest, diffs it against what's already cached in IndexedDB by
    * content hash, and downloads anything missing or stale. Reports progress via `onEvent`;
@@ -52,6 +53,17 @@ export interface AssetsManagerApi {
   readonly criticalReady: Promise<void>
   /** Requests durable storage so the OS doesn't evict IndexedDB under pressure. */
   persist(): Promise<boolean>
+  /**
+   * {@link SystemLifecycle} entry point — thin alias over `warmUp(undefined, onEvent)`, used by
+   * `AppOrchestrator` once it has obtained the instance from `SystemHost.worker.ts`'s `get(id)`
+   * (or the inline factory, depending on `SystemAllocator`'s decision).
+   *
+   * @param onEvent - optional progress callback, defaults to a no-op
+   * @see docs/system-allocator.md
+   */
+  startUp(onEvent?: (event: AssetLoadEvent) => void): Promise<void>
+  /** No-op today — AssetsManager holds no open connection/timer to release. Kept honest with {@link SystemLifecycle}. */
+  shutDown(): Promise<void>
 }
 
 /**
@@ -105,5 +117,10 @@ export function createAssetsManager(): AssetsManagerApi {
     return navigator.storage.persist()
   }
 
-  return { warmUp, criticalReady, persist }
+  const startUp = (onEvent: (event: AssetLoadEvent) => void = () => {}): Promise<void> =>
+    warmUp(undefined, onEvent)
+
+  const shutDown = async (): Promise<void> => {}
+
+  return { warmUp, criticalReady, persist, startUp, shutDown }
 }

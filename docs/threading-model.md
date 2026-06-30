@@ -36,11 +36,11 @@ Aucune logique de jeu ne tourne sur le Main Thread.
 - **Chemin chaud (every frame) :** SharedArrayBuffer + Atomics — zéro copie, zéro latence
 - **Chemin froid (init, pause, resize) :** postMessage — acceptable pour les événements rares
 
-### ⚠️ Note — 5ᵉ thread déjà implémenté, pas compté ici
+### Note — 5ᵉ thread, placement maintenant dynamique
 
-`src/core/assetsManager.worker.ts` existe et tourne déjà (voir `docs/assets-manager.md`) — un worker
-dédié pour le warm-up IndexedDB des assets statiques, hors du chemin chaud SAB décrit ci-dessus (pas
-de boucle de jeu, juste quelques appels async au démarrage). Ce doc décrit les 4 threads de la boucle
-de jeu (Main/Simulation/Render/Audio), pas l'inventaire complet des workers du projet. Voir
-`docs/worker-adaptive-strategy.md` pour la question ouverte sur la rigidité d'avoir un worker dédié
-par système plutôt qu'une allocation dynamique selon `hardwareConcurrency`.
+AssetsManager (voir `docs/assets-manager.md`) tourne hors du chemin chaud SAB décrit ci-dessus (pas
+de boucle de jeu, juste quelques appels async au démarrage) — soit dans `src/core/SystemHost.worker.ts`
+(worker dédié), soit inline sur le main thread, selon la décision de `src/core/SystemAllocator.ts`
+au runtime. Ce doc décrit les 4 threads de la boucle de jeu (Main/Simulation/Render/Audio), pas
+l'inventaire complet des workers du projet. Voir `docs/system-allocator.md` pour la règle N-1 et
+le pattern de multiplexage lazy qui remplace l'ancien `assetsManager.worker.ts` codé en dur.
