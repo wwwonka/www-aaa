@@ -32,6 +32,7 @@ export class PauseBlurEffect {
   get isActive(): boolean { return this._mode !== 'normal' }
 
   enter(): void {
+    if (this.isActive) this._frozen.deactivate()
     this._frozen.activate(this._gl, this._width(), this._height())
     this._elapsed = 0
     this._mode    = 'pausing'
