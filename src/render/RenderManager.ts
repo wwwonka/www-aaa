@@ -1,28 +1,30 @@
 import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylonjs/core/pure'
 
 RegisterStandardEngineExtensions()
-import { Graphics }             from 'pixi.js'
 import { sceneSetup }           from './scene/sceneSetup'
 import { createUIRenderer }     from './layers/uiRenderer'
 import type { UIRenderer }      from './layers/uiRenderer'
 import { PauseBlurEffect }      from './effects/PauseBlurEffect'
-import { PauseScreen }          from '../ui/screens/pause/PauseScreen'
+import { ScreenManager }        from '../ui/ScreenManager'
+import { PauseScreen }          from '../ui/screens/PauseScreen'
+import { TitleScreen }          from '../ui/screens/TitleScreen'
+import { InGameScreen }         from '../ui/screens/InGameScreen'
 import { startRenderLoop }      from './renderLoop'
 import type { AppState, AppEvent } from '../core/AppStateMachine'
 
 export class RenderManager {
-  private _canvas!:      OffscreenCanvas
-  private _engine!:      Engine
-  private _scene!:       Scene
-  private _gl!:          WebGL2RenderingContext
-  private _ui!:          UIRenderer
-  private _pauseBlur!:   PauseBlurEffect
-  private _pauseScreen!: PauseScreen
-  private _width!:       number
-  private _height!:      number
-  private _targetFps!:   number
-  private _stopLoop!:    () => void
-  private _lastTime:     number = 0
+  private _canvas!:         OffscreenCanvas
+  private _engine!:         Engine
+  private _scene!:          Scene
+  private _gl!:             WebGL2RenderingContext
+  private _ui!:             UIRenderer
+  private _pauseBlur!:      PauseBlurEffect
+  private _screenManager!:  ScreenManager
+  private _width!:          number
+  private _height!:         number
+  private _targetFps!:      number
+  private _stopLoop!:       () => void
+  private _lastTime:        number = 0
 
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
     this._canvas = canvas
@@ -54,30 +56,33 @@ export class RenderManager {
     this._listenMessages()
   }
 
-  // Reçoit les événements ASM depuis le main thread
   setSendToAsm(fn: (event: AppEvent) => void): void {
-    this._pauseScreen = new PauseScreen(fn, this._width, this._height)
+    this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI)
+
+    this._screenManager.register('PAUSED',       new PauseScreen(fn, this._width, this._height))
+    this._screenManager.register('TITLE_SCREEN', new TitleScreen(this._width, this._height))
+    this._screenManager.register('IN_GAME',      new InGameScreen(this._width, this._height))
   }
 
   showScreen(state: AppState): void {
-    switch (state) {
-      case 'PAUSED':
-        this._pauseBlur.enter()
-        if (this._pauseScreen) {
-          this._ui.overlayUI.addChild(this._pauseScreen.container)
-        }
-        break
-
-      case 'IN_GAME':
-        this._pauseBlur.exit()
-        this._ui.overlayUI.removeChildren()
-        break
-
-      case 'TITLE_SCREEN':
-        this._pauseBlur.exit()
-        this._ui.overlayUI.removeChildren()
-        break
+    if (state === 'PAUSED') {
+      this._pauseBlur.enter()
+    } else if (this._pauseBlur.isActive) {
+      this._pauseBlur.exit()
     }
+    this._screenManager?.transition(state)
+  }
+
+  setFps(fps: number): void {
+    this._targetFps = fps
+    this._stopLoop()
+    this._stopLoop = startRenderLoop((ts) => this._frame(ts), fps)
+  }
+
+  dispose(): void {
+    this._stopLoop()
+    this._ui.destroy()
+    this._engine.dispose()
   }
 
   private _listenMessages(): void {
@@ -91,7 +96,7 @@ export class RenderManager {
         this._engine.resize()
         this._ui.resize(w, h)
         this._pauseBlur.resize(w, h)
-        this._pauseScreen?.resize(w, h)
+        this._screenManager?.resize(w, h)
         this._frame(performance.now())
       }
       if (e.data?.type === 'visibility') {
@@ -106,17 +111,14 @@ export class RenderManager {
 
   private async _setupScene(): Promise<void> {
     sceneSetup(this._engine, this._scene)
-
-    // Rectangle de debug — à retirer une fois le rendu PixiJS stabilisé
-    const debug = new Graphics().rect(50, 50, 120, 40).fill(0xff0000)
-    this._ui.gameUI.addChild(debug)
   }
 
   private _frame(ts: number): void {
-    const delta      = this._lastTime ? ts - this._lastTime : 16
-    this._lastTime   = ts
+    const delta    = this._lastTime ? ts - this._lastTime : 16
+    this._lastTime = ts
 
-    // Babylon ne rend pas quand le blur est figé (état PAUSED)
+    this._screenManager?.update(delta)
+
     if (this._pauseBlur.mode !== 'frozen') {
       this._scene.render()
     }
@@ -131,17 +133,5 @@ export class RenderManager {
     }
 
     this._engine.wipeCaches(true)
-  }
-
-  setFps(fps: number): void {
-    this._targetFps = fps
-    this._stopLoop()
-    this._stopLoop = startRenderLoop((ts) => this._frame(ts), fps)
-  }
-
-  dispose(): void {
-    this._stopLoop()
-    this._ui.destroy()
-    this._engine.dispose()
   }
 }

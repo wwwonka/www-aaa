@@ -1,0 +1,60 @@
+import type { Container } from 'pixi.js'
+import type { AppState }  from '../core/AppStateMachine'
+import type { UIScreen }  from './UIScreen'
+
+interface ScreenEntry {
+  readonly screen: UIScreen
+  readonly layer:  Container
+}
+
+/**
+ * Maps `AppState` values to `UIScreen` instances and drives their lifecycle.
+ *
+ * Screens are permanently attached to their layer at `register()` time (alpha=0,
+ * no interactions). Transitions fade out the current screen and fade in the next
+ * without any `addChild`/`removeChild` churn.
+ */
+export class ScreenManager {
+  private readonly _map:     Map<AppState, ScreenEntry> = new Map()
+  private          _current: AppState | null = null
+
+  private readonly _gameUI:    Container
+  private readonly _overlayUI: Container
+
+  constructor(gameUI: Container, overlayUI: Container) {
+    this._gameUI    = gameUI
+    this._overlayUI = overlayUI
+  }
+
+  /**
+   * Register a screen for a given app state.
+   * The screen is immediately added to its layer at alpha=0 with no interactions.
+   */
+  register(state: AppState, screen: UIScreen): void {
+    const layer = screen.layer === 'gameUI' ? this._gameUI : this._overlayUI
+    layer.addChild(screen)
+    this._map.set(state, { screen, layer })
+  }
+
+  /**
+   * Transition to a new state: fade out the current screen, fade in the next.
+   * Side-effects (blur, etc.) should be handled by the caller before invoking this.
+   */
+  transition(to: AppState): void {
+    if (this._current !== null) {
+      this._map.get(this._current)?.screen.onLeave()
+    }
+    this._map.get(to)?.screen.onEnter()
+    this._current = to
+  }
+
+  /** Forward per-frame delta to all registered screens. */
+  update(delta: number): void {
+    for (const { screen } of this._map.values()) screen.update(delta)
+  }
+
+  /** Forward resize to all registered screens. */
+  resize(width: number, height: number): void {
+    for (const { screen } of this._map.values()) screen.resize(width, height)
+  }
+}

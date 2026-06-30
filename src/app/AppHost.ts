@@ -3,29 +3,14 @@ import type { RenderWorkerApi }           from '../render/render.worker'
 import { mountEventHandlers }             from './events/_index'
 import { installBrowserGuards }           from './browser-guards/_index'
 import { detectAppContext }               from './platform/ContextManager'
+import { registerServiceWorker }          from './platform/serviceWorkerRegister'
 import { appActor, startAppStateMachine } from '../core/AppStateMachine'
 
 export class AppHost {
   async start(): Promise<void> {
     const ctx = detectAppContext()
-    if (import.meta.env.DEV) {
-      import('../_dev/logger').then(({ createGroupLogger, createLogger }) => {
-        const log    = createGroupLogger('AppHost', '#2c3e50')
-        const logAsm = createLogger('ASM', '#8e44ad')
-
-        log.group(`${ctx.platform} | ${ctx.role}`)
-        log.row('platform', ctx.platform)
-        log.row('role',     ctx.role)
-        log.groupEnd()
-
-        // Log chaque transition d'état
-        appActor.subscribe(snapshot => {
-          logAsm(`→ ${String(snapshot.value)}`)
-        })
-      })
-    }
-
     installBrowserGuards()
+    registerServiceWorker(ctx.runtime)
 
     const canvas = document.getElementById('canvas') as HTMLCanvasElement
 
@@ -44,7 +29,8 @@ export class AppHost {
 
     await renderApi.init(Comlink.transfer(offscreen, [offscreen]))
 
-    // Branche l'ASM — chaque transition d'état met à jour le render worker
+    await renderApi.setSendToAsm(Comlink.proxy((event) => appActor.send(event as any)))
+
     appActor.subscribe(snapshot => {
       renderApi.showScreen(snapshot.value as any)
     })
@@ -53,12 +39,11 @@ export class AppHost {
     window.addEventListener('keydown', (e) => {
       const state = appActor.getSnapshot().value
       if (e.key === ' ') {
-        // DEV — force IN_GAME (simule un controller connecté)
         appActor.send({ type: 'CONTROLLER_CONNECTED' })
         appActor.send({ type: 'PLAY' })
       }
       if (e.key === 'Enter') {
-        if (state === 'IN_GAME')  appActor.send({ type: 'PAUSE' })
+        if (state === 'IN_GAME')     appActor.send({ type: 'PAUSE' })
         else if (state === 'PAUSED') appActor.send({ type: 'RESUME' })
       }
     })

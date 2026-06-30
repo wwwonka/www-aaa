@@ -1,13 +1,11 @@
 import type { FrozenGameLayer } from '../layers/layer2_frozenGame'
+import { easeIn, easeOut }     from '../../ui/layout'
 
 type RenderMode = 'normal' | 'pausing' | 'frozen' | 'resuming'
 
 const PAUSE_DURATION  = 350
 const RESUME_DURATION = 350
 const MAX_STRENGTH    = 12
-
-function easeOut(t: number): number { return 1 - (1 - t) * (1 - t) }
-function easeIn(t: number):  number { return t * t }
 
 export class PauseBlurEffect {
   private _frozen:   FrozenGameLayer

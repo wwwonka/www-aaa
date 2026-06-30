@@ -1,12 +1,16 @@
 import * as Comlink from 'comlink'
 import { RenderManager } from './RenderManager'
-import type { AppState } from '../core/AppStateMachine'
+import type { AppState, AppEvent } from '../core/AppStateMachine'
 
 const manager = new RenderManager()
 
 const api = {
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
     await manager.init(canvas, targetFps)
+  },
+
+  setSendToAsm(fn: (event: AppEvent) => void): void {
+    manager.setSendToAsm(fn)
   },
 
   setFps(fps: number): void {
