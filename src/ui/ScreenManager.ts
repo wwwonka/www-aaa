@@ -1,5 +1,5 @@
 import type { Container } from 'pixi.js'
-import type { AppState }  from '../core/AppStateMachine'
+import type { AppState }  from '../core/AppOrchestrator'
 import type { UIScreen }  from './UIScreen'
 
 interface ScreenEntry {

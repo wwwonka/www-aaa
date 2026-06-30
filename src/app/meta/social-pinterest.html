@@ -1,0 +1,49 @@
+<link rel="alternate" href="android-app://[package.name]/https/[tonsite].com/[jeu]">
+
+<!-- ——— JSON-LD : STRUCTURED DATA POUR GOOGLE ——— -->
+<!-- Permet d'afficher un rich snippet dans les résultats Google
+	 avec note, plateforme, prix, etc. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "[Nom du Jeu]",
+  "description": "[Description complète du jeu]",
+  "image": "https://[tonsite].com/images/[jeu]-og.jpg",
+  "url": "https://[tonsite].com/[slug-du-jeu]",
+  "genre": ["[Action]", "[RPG]", "[Aventure]"],
+  "gamePlatform": ["PC", "PlayStation 5", "Xbox Series X", "Nintendo Switch"],
+  "operatingSystem": ["Windows", "macOS"],
+  "applicationCategory": "Game",
+  "author": {
+	"@type": "Organization",
+	"name": "[Nom du Studio]",
+	"url": "https://[tonsite].com"
+  },
+  "publisher": {
+	"@type": "Organization",
+	"name": "[Nom de l'Éditeur]"
+  },
+  "datePublished": "[2026-09-15]",
+  "inLanguage": ["fr", "en"],
+  "offers": {
+	"@type": "Offer",
+	"price": "[29.99]",
+	"priceCurrency": "EUR",
+	"availability": "https://schema.org/PreOrder",
+	"url": "https://store.steampowered.com/app/[STEAM_ID]"
+  },
+  "aggregateRating": {
+	"@type": "AggregateRating",
+	"ratingValue": "[4.5]",
+	"ratingCount": "[1200]",
+	"bestRating": "5"
+  },
+  "trailer": {
+	"@type": "VideoObject",
+	"name": "[Nom du Jeu] — Trailer Officiel",
+	"thumbnailUrl": "https://[tonsite].com/images/[jeu]-thumb.jpg",
+	"contentUrl": "https://[tonsite].com/videos/[jeu]-trailer.mp4",
+	"uploadDate": "[2026-06-01]"
+  }
+}

@@ -10,7 +10,7 @@ import { PauseScreen }          from '../ui/screens/PauseScreen'
 import { TitleScreen }          from '../ui/screens/TitleScreen'
 import { InGameScreen }         from '../ui/screens/InGameScreen'
 import { startRenderLoop }      from './renderLoop'
-import type { AppState, AppEvent } from '../core/AppStateMachine'
+import type { AppState, AppEvent } from '../core/AppOrchestrator'
 
 export class RenderManager {
   private _canvas!:         OffscreenCanvas

@@ -19,6 +19,10 @@ export type AppEvent =
   | { type: 'TRANSFER_BACK' }
   | { type: 'CONTROLLER_CONNECTED' }
   | { type: 'CONTROLLER_DISCONNECTED' }
+  | { type: 'ASSET_START'; total: number }
+  | { type: 'ASSET_PROGRESS'; path: string; loaded: number; total: number }
+  | { type: 'ASSET_COMPLETE' }
+  | { type: 'ASSET_ERROR'; path: string; error: string }
 
 interface AppContext {
   hasController: boolean
@@ -84,11 +88,36 @@ const appMachine = createMachine(
 )
 
 // ---------------------------------------------------------------------------
-// Actor (singleton)
+// Orchestrator
 // ---------------------------------------------------------------------------
 
-export const appActor = createActor(appMachine)
+/**
+ * Cerveau organisationnel du Shell (main thread). Détient le cycle de vie et l'état
+ * applicatif (xstate) du jeu, et dirige les autres managers (ScreenManager, AssetsManager)
+ * via des events de haut niveau plutôt que de laisser cette logique s'éparpiller dans AppHost.
+ */
+export class AppOrchestrator {
+  private readonly actor = createActor(appMachine)
 
-export function startAppStateMachine() {
-  appActor.start()
+  startUp(): void {
+    this.actor.start()
+  }
+
+  shutDown(): void {
+    this.actor.stop()
+  }
+
+  send(event: AppEvent): void {
+    this.actor.send(event)
+  }
+
+  subscribe(listener: Parameters<typeof this.actor.subscribe>[0]): void {
+    this.actor.subscribe(listener)
+  }
+
+  getSnapshot() {
+    return this.actor.getSnapshot()
+  }
 }
+
+export const appOrchestrator = new AppOrchestrator()

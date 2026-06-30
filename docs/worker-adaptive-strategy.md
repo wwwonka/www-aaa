@@ -62,4 +62,14 @@ src/app/
   AppHost.ts            ← lit la stratégie, délègue, ne sait plus si unifié ou dédié
 ```
 
+## ⚠️ Mise à jour — `assetsManager.worker.ts` n'est pas dans cette hiérarchie
+
+Un worker dédié pour l'AssetsManager existe déjà (`src/core/assetsManager.worker.ts`, voir
+`docs/assets-manager.md`) — codé en dur (`new Worker(...)` dans `AppHost.ts`), pas soumis à la
+stratégie adaptive ci-dessus. Sur un appareil à 2 cœurs, on a donc déjà 3 threads (Main + Render +
+AssetsManager) sans même compter Simulation/Audio pas encore implémentés — exactement le scénario que
+ce doc met en garde. À trancher avant d'ajouter d'autres workers dédiés : soit l'AssetsManager rejoint
+un worker partagé en mode dégradé, soit la hiérarchie de décision ci-dessus doit compter tous les
+systèmes (pas seulement render/simulation/audio) pour rester valide.
+
 Non implémenté — à faire après que la simulation et le render soient fonctionnels et profilés.

@@ -1,6 +1,6 @@
-import { Engine, MeshBuilder, Scene, StandardMaterial, Color3 } from '@babylonjs/core/pure'
+import { Engine, Scene, MeshBuilder, StandardMaterial, Color3 } from '@babylonjs/core/pure'
 import { createCamera } from './camera'
-import { createLights } from './lights'
+import { createLights }  from './lights'
 
 export function sceneSetup(_engine: Engine, scene: Scene): void {
   createCamera(scene)
@@ -14,5 +14,4 @@ export function sceneSetup(_engine: Engine, scene: Scene): void {
   scene.onBeforeRenderObservable.add(() => {
     box.rotation.y += 0.01
   })
-
 }

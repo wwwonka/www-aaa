@@ -100,10 +100,16 @@
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  CORE  (src/core/)  — stubs à implémenter                               │
+│  CORE  (src/core/)  — partiellement implémenté, voir docs/assets-manager.md │
 │                                                                         │
-│  AppStateMachine.ts  — FSM globale de l'application                     │
-│  gameLoop.ts         — boucle de simulation principale                  │
+│  AppOrchestrator.ts  — classe, FSM xstate du Shell + cycle de vie       │
+│                         startUp()/shutDown() (renommé depuis            │
+│                         AppStateMachine.ts/appActor)                    │
+│  AssetsManager.ts    — warm-up IDB des assets statiques (voir doc dédiée)│
+│  assetDb.ts          — wrapper IndexedDB natif, DB AssetsDB             │
+│  assetPath.ts        — (namespace,type,filename) → chemin réel          │
+│  assetsManager.worker.ts — expose AssetsManager via Comlink, worker dédié│
+│  gameLoop.ts         — boucle de simulation principale  — 🚧 stub       │
 │  sab-manager.ts      — alloue et slice le SharedArrayBuffer global      │
 │                         (matrixBytes + stateBytes + audioBytes)         │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -163,9 +169,10 @@ sab-manager.ts alloue un seul SAB découpé en 3 zones :
 | shared/config + types + constants | ✅ fonctionnel |
 | sab-manager (allocation SAB) | ✅ structure prête |
 | CommandBuffer (GameCommand) | ✅ structure prête |
+| AppOrchestrator (ex-AppStateMachine) | ✅ fonctionnel |
+| AssetsManager + IndexedDB + SW double-cache | ✅ fonctionnel — voir docs/assets-manager.md |
 | Simulation worker | 🚧 stub |
 | Audio worker | 🚧 stub |
-| AppStateMachine | 🚧 stub |
 | gameLoop | 🚧 stub |
 | InputProxy | 🚧 stub |
 | pixiShellUI | 🚧 stub |

@@ -1,0 +1,27 @@
+/// <reference lib="webworker" />
+import { enableTransparentFavicon, handleFaviconFetch, restoreTransparentFaviconPref } from './pwa/desktop-firefox/transparentFavicon'
+import { handleAssetFetch, loadAssetManifest } from './assetCacheFetch'
+
+const sw = self as unknown as ServiceWorkerGlobalScope
+
+sw.addEventListener('install', () => {
+  sw.skipWaiting()
+})
+
+sw.addEventListener('activate', (event: ExtendableEvent) => {
+  // Restaure les prefs persistées + le manifest d'assets avant de prendre le contrôle des clients
+  event.waitUntil(
+    Promise.all([restoreTransparentFaviconPref(), loadAssetManifest()]).then(() => sw.clients.claim()),
+  )
+})
+
+sw.addEventListener('message', (event: ExtendableMessageEvent) => {
+  if (event.data?.type === 'enable-transparent-favicon') {
+    enableTransparentFavicon()
+  }
+})
+
+sw.addEventListener('fetch', (event: FetchEvent) => {
+  if (handleAssetFetch(event)) return
+  handleFaviconFetch(event)
+})

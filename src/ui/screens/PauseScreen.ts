@@ -1,7 +1,7 @@
 import { UIScreen }        from '../UIScreen'
 import { PauseMenuPanel }  from '../panels/PauseMenuPanel'
 import { resolvePosition, Anchor } from '../layout'
-import type { AppEvent }   from '../../core/AppStateMachine'
+import type { AppEvent }   from '../../core/AppOrchestrator'
 
 type SendFn = (event: AppEvent) => void
 
