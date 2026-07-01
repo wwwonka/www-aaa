@@ -110,7 +110,7 @@ export class RenderManager {
   }
 
   private async _setupScene(): Promise<void> {
-    sceneSetup(this._engine, this._scene)
+    await sceneSetup(this._engine, this._scene)
   }
 
   private _frame(ts: number): void {

@@ -1,6 +1,7 @@
 import * as Comlink from 'comlink'
 import { RenderManager } from './RenderManager'
 import type { AppState, AppEvent } from '../core/AppOrchestrator'
+import './assets/registerDefaultLoaders'
 
 const manager = new RenderManager()
 
