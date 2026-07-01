@@ -1,7 +1,7 @@
 import { RenderManager }                   from '../../render/RenderManager'
 import { detectAppContext }                from '../../app/platform/ContextManager'
 import { appOrchestrator }                 from '../../core/AppOrchestrator'
-import { installBrowserGuards }            from '../../app/browser-guards/_index'
+import { installBrowserGuards }            from '../../app/guards/_index'
 import { registerServiceWorker }           from '../../app/platform/serviceWorkerRegister'
 import { DebugOverlay }                    from '../overlay/DebugOverlay'
 import { setupDevTools }                   from '../setup'

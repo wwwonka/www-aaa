@@ -1,7 +1,7 @@
 import * as Comlink from 'comlink'
 import type { RenderWorkerApi }           from '../render/render.worker'
 import { mountEventHandlers }             from './events/_index'
-import { installBrowserGuards }           from './browser-guards/_index'
+import { installBrowserGuards }           from './guards/_index'
 import { detectAppContext }               from './platform/ContextManager'
 import { registerServiceWorker }          from './platform/serviceWorkerRegister'
 import { appOrchestrator }                from '../core/AppOrchestrator'
