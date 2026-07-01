@@ -84,6 +84,7 @@ export function createAssetsManager(): AssetsManagerApi {
   async function warmUp(namespace: AssetNamespace | undefined, onEvent: (event: AssetLoadEvent) => void): Promise<void> {
     const manifest = await fetchManifest()
     pendingCritical ??= new Set(flatten(manifest).filter(e => e.type === CRITICAL_TYPE).map(e => e.path))
+    const pendingSet = pendingCritical
 
     const requested = flatten(manifest, namespace)
     const critical   = flatten(manifest).filter(e => e.type === CRITICAL_TYPE && !requested.some(r => r.path === e.path))
@@ -93,22 +94,24 @@ export function createAssetsManager(): AssetsManagerApi {
 
     onEvent({ type: 'start', total: toLoad.length })
 
-    for (const [index, entry] of toLoad.entries()) {
+    let completed = 0
+    await Promise.all(toLoad.map(async (entry) => {
       try {
         const cached = await getAsset(db, entry.path)
         if (cached?.hash !== entry.hash) {
           const blob = await fetch(`/${entry.path}`).then(r => r.blob())
           await putAsset(db, { path: entry.path, namespace: entry.namespace, type: entry.type, hash: entry.hash, size: entry.size, cachedAt: Date.now(), blob })
         }
-        onEvent({ type: 'progress', path: entry.path, loaded: index + 1, total: toLoad.length })
+        completed++
+        onEvent({ type: 'progress', path: entry.path, loaded: completed, total: toLoad.length })
       } catch (error) {
         onEvent({ type: 'error', path: entry.path, error: String(error) })
       }
 
-      pendingCritical.delete(entry.path)
-    }
+      pendingSet.delete(entry.path)
+    }))
 
-    if (pendingCritical.size === 0) resolveCriticalReady()
+    if (pendingSet.size === 0) resolveCriticalReady()
     onEvent({ type: 'complete' })
   }
 

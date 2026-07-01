@@ -32,7 +32,7 @@ export class ScreenManager {
    */
   register(state: AppState, screen: UIScreen): void {
     const layer = screen.layer === 'gameUI' ? this._gameUI : this._overlayUI
-    layer.addChild(screen)
+    layer.addChild(screen.node)
     this._map.set(state, { screen, layer })
   }
 

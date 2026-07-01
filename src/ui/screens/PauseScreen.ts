@@ -17,12 +17,12 @@ export class PauseScreen extends UIScreen {
       () => send({ type: 'RESUME' }),
       () => send({ type: 'QUIT'   }),
     )
-    this.addChild(this._panel)
+    this.node.addChild(this._panel.node)
     this.onResize(width, height)
   }
 
   protected onResize(w: number, h: number): void {
     const { x, y } = resolvePosition({ nx: 0.5, ny: 0.5 }, Anchor.CENTER, w, h)
-    this._panel.position.set(x, y)
+    this._panel.node.position.set(x, y)
   }
 }

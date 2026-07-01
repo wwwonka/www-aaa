@@ -1,6 +1,7 @@
 import type { Scene, AbstractMesh, Texture } from '@babylonjs/core/pure'
 import { getLoader, defaultResolve } from './registry'
 import type { LoaderContext } from './types'
+import type { AnimationTrack } from './loaders/AnimationLoader'
 
 const inFlight = new Map<string, Promise<unknown>>()
 
@@ -67,6 +68,11 @@ export function loadFont(path: string): Promise<FontFace> {
 
 /** Loads and decodes an audio file into an `AudioBuffer` — thin wrapper over {@link loadAsset}. */
 export function loadAudio(path: string): Promise<AudioBuffer> {
+  return loadAsset(path)
+}
+
+/** Loads a baked `.anim` track (see `loaders/AnimationLoader.ts`) — thin wrapper over {@link loadAsset}. */
+export function loadAnimation(path: string): Promise<AnimationTrack> {
   return loadAsset(path)
 }
 

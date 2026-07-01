@@ -11,7 +11,7 @@ import { allocateSystems }                from '../core/SystemAllocator'
 import type { SystemHostApi }             from '../core/SystemHost.worker'
 
 export class AppHost {
-  async start(): Promise<void> {
+  async start(): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
     const ctx = detectAppContext()
     installBrowserGuards()
     registerServiceWorker(ctx.runtime)
@@ -55,24 +55,20 @@ export class AppHost {
 
     await renderApi.setSendToAsm(Comlink.proxy((event) => appOrchestrator.send(event as any)))
 
+    // xstate émet un nouveau snapshot à chaque `.send()`, y compris les events ASSET_PROGRESS du
+    // warmUp() parallélisé (un par asset) — sans déduplication, showScreen() (et donc
+    // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
+    // vrai changement d'écran.
+    let lastScreenState: string | undefined
     appOrchestrator.subscribe(snapshot => {
+      if (snapshot.value === lastScreenState) return
+      lastScreenState = snapshot.value as string
       renderApi.showScreen(snapshot.value as any)
     })
     appOrchestrator.startUp()
 
-    window.addEventListener('keydown', (e) => {
-      const state = appOrchestrator.getSnapshot().value
-      if (e.key === ' ') {
-        appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' })
-        appOrchestrator.send({ type: 'PLAY' })
-        assetsManager.persist()
-      }
-      if (e.key === 'Enter') {
-        if (state === 'IN_GAME')     appOrchestrator.send({ type: 'PAUSE' })
-        else if (state === 'PAUSED') appOrchestrator.send({ type: 'RESUME' })
-      }
-    })
-
     mountEventHandlers({ canvas, renderWorker })
+
+    return { assetsManager, renderApi }
   }
 }

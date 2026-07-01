@@ -11,6 +11,9 @@ import { TitleScreen }          from '../ui/screens/TitleScreen'
 import { InGameScreen }         from '../ui/screens/InGameScreen'
 import { startRenderLoop }      from './renderLoop'
 import type { AppState, AppEvent } from '../core/AppOrchestrator'
+import { applyAnimatedValue }   from './animation/AnimationRegistry'
+import { playAnimation, updateAnimations, pausePlayback, resumePlayback } from './animation/AnimationPlayer'
+import { dispatchPointerEvent } from './events/pointerBridge'
 
 export class RenderManager {
   private _canvas!:         OffscreenCanvas
@@ -25,6 +28,7 @@ export class RenderManager {
   private _targetFps!:      number
   private _stopLoop!:       () => void
   private _lastTime:        number = 0
+  private _currentState:    AppState | null = null
 
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
     this._canvas = canvas
@@ -43,6 +47,9 @@ export class RenderManager {
 
     this._ui = await createUIRenderer(this._gl, this._width, this._height)
 
+    // Le vrai OffscreenCanvas comme domElement — cas documenté par Pixi (voir EventSystem.setCursor).
+    this._ui.renderer.events.setTargetElement(this._canvas as unknown as HTMLElement)
+
     this._pauseBlur = new PauseBlurEffect(
       this._ui.frozenGame,
       this._gl,
@@ -56,11 +63,26 @@ export class RenderManager {
     this._listenMessages()
   }
 
-  setSendToAsm(fn: (event: AppEvent) => void): void {
+  /** Generic entry point for external value injection (dev bridge via Comlink, or any future driver). */
+  applyExternalValue(id: string, value: number): void {
+    applyAnimatedValue(id, value)
+  }
+
+  /** Generic — this module doesn't know or care why playback is being paused. */
+  pauseAnimationPlayback(): void {
+    pausePlayback()
+  }
+
+  resumeAnimationPlayback(): void {
+    resumePlayback()
+    if (this._currentState) this._playScreenAnimations(this._currentState)
+  }
+
+  async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
     this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI)
 
     this._screenManager.register('PAUSED',       new PauseScreen(fn, this._width, this._height))
-    this._screenManager.register('TITLE_SCREEN', new TitleScreen(this._width, this._height))
+    this._screenManager.register('TITLE_SCREEN', await TitleScreen.create(this._width, this._height))
     this._screenManager.register('IN_GAME',      new InGameScreen(this._width, this._height))
   }
 
@@ -71,6 +93,17 @@ export class RenderManager {
       this._pauseBlur.exit()
     }
     this._screenManager?.transition(state)
+
+    this._currentState = state
+    this._playScreenAnimations(state)
+  }
+
+  /** Rejoue les binaires baked pour l'écran affiché — appelé à la transition, et à la reprise après une pause externe. */
+  private _playScreenAnimations(state: AppState): void {
+    if (state === 'TITLE_SCREEN') {
+      playAnimation('title.opacity')
+      playAnimation('connectController.opacity')
+    }
   }
 
   setFps(fps: number): void {
@@ -102,6 +135,13 @@ export class RenderManager {
       if (e.data?.type === 'visibility') {
         e.data.hidden ? this._stopLoop() : this._restartLoop()
       }
+      if (e.data?.type === 'pointer') {
+        // EventSystem réécrit rootBoundary.rootTarget depuis renderer.lastObjectRendered à chaque
+        // event — cette détection ne se met jamais à jour correctement dans notre setup (contexte
+        // GL partagé avec Babylon), donc on la réaffirme avant chaque dispatch plutôt qu'une fois.
+        this._ui.renderer.events.rootBoundary.rootTarget = this._ui.stage
+        dispatchPointerEvent(this._canvas, this._ui.renderer, e.data)
+      }
     })
   }
 
@@ -118,6 +158,7 @@ export class RenderManager {
     this._lastTime = ts
 
     this._screenManager?.update(delta)
+    updateAnimations(delta)
 
     if (this._pauseBlur.mode !== 'frozen') {
       this._scene.render()
