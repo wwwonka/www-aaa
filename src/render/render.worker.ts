@@ -1,12 +1,16 @@
 import * as Comlink from 'comlink'
 import { RenderManager } from './RenderManager'
 import type { AppState, AppEvent } from '../core/AppOrchestrator'
-import './assets/registerDefaultLoaders'
+import { devLoadersReady } from './assets/registerDefaultLoaders'
 
 const manager = new RenderManager()
 
 const api = {
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
+    // Le loader JSON dev-only s'enregistre via un import dynamique (non bloquant au chargement du
+    // module — un top-level await ici a fait planter le démarrage du Worker en dev). On attend
+    // qu'il soit prêt avant que quoi que ce soit puisse demander une animation.
+    await devLoadersReady
     await manager.init(canvas, targetFps)
   },
 

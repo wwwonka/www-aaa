@@ -10,6 +10,7 @@ import minifyManifestPlugin from "./_dev/vite-minify-manifest-plugin.ts";
 import { bundleSizePlugin }  from "./_dev/vite-bundle-size-plugin.ts";
 import assetManifestPlugin  from "./_dev/vite-asset-manifest-plugin.ts";
 import workerNoCachePlugin  from "./_dev/vite-worker-no-cache-plugin.ts";
+import animPlugin           from "./_dev/vite-anim-plugin.ts";
 
 // COEP 'require-corp' est requis pour SharedArrayBuffer
 // Safari exige en plus CORP sur chaque ressource servie — sans ça les imports worker sont bloqués
@@ -32,6 +33,7 @@ export default defineConfig({
 		bundleSizePlugin(),
 		assetManifestPlugin(),
 		workerNoCachePlugin(),
+		animPlugin(),
 	],
 	server: {
 		host: true,

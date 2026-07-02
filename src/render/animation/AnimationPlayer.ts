@@ -54,7 +54,11 @@ export async function playAnimation(id: string): Promise<void> {
   if (paused) return
   let track: AnimationTrack
   try {
-    track = await loadAnimation(assetPath('game', 'animations', `${id}.anim`))
+    // .json en dev (natif Theatre.js, committé) — .anim binaire en prod (généré au build, jamais
+    // committé). import.meta.env.DEV est remplacé statiquement par Vite, donc une seule des deux
+    // branches survit dans chaque bundle.
+    const ext = import.meta.env.DEV ? 'json' : 'anim'
+    track = await loadAnimation(assetPath('game', 'animations', `${id}.${ext}`))
   } catch (err) {
     console.info(`[AnimationPlayer] no baked animation for "${id}" yet`, err)
     return
