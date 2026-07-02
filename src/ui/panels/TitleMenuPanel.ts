@@ -2,7 +2,6 @@ import { Container } from 'pixi.js'
 import { UIComponent } from '../UIComponent'
 import { TextLabel } from '../components/TextLabel'
 import { loadFont } from '../../render/assets/loadAsset'
-import { assetPath } from '../../core/assetPath'
 
 export class TitleMenuPanel extends UIComponent {
   readonly node: Container
@@ -48,7 +47,7 @@ export class TitleMenuPanel extends UIComponent {
 
   /** Loads and registers fezbox into this Worker's `FontFaceSet` before any `TextLabel` using it is constructed. */
   static async create(onConnectController: () => void): Promise<TitleMenuPanel> {
-    const face = await loadFont(assetPath('game', 'font', 'fezbox.otf'))
+    const face = await loadFont('fezbox.otf')
     ;(self as unknown as WorkerGlobalScope & { 
       fonts: FontFaceSet 
     }).fonts.add(face)

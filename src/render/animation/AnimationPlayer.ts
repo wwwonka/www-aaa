@@ -1,12 +1,10 @@
 import { loadAnimation } from '../assets/loadAsset'
-import { assetPath } from '../../core/assetPath'
 import { applyAnimatedValue } from './AnimationRegistry'
-import { TrackType, type AnimationTrack } from '../assets/loaders/AnimationLoader'
+import { TrackType, type AnimationTrack, type AnimationTrackSet } from '../assets/loaders/AnimationLoader'
 
 interface PlayingAnimation {
-  readonly id:    string
-  readonly track: AnimationTrack
-  elapsed:        number
+  readonly tracks: AnimationTrackSet
+  elapsed:         number
 }
 
 const playing: PlayingAnimation[] = []
@@ -24,7 +22,7 @@ export function resumePlayback(): void {
   paused = false
 }
 
-/** LERPs `track`'s [time, value] keyframes at `t`. Only `FLOAT` tracks are implemented — see `AnimationLoader.ts`. */
+/** LERPs `track`'s [time, value] keyframes at `t` (seconds — Theatre.js's own sequence position unit). Only `FLOAT` tracks are implemented — see `AnimationLoader.ts`. */
 function sample(track: AnimationTrack, t: number): number {
   const { keyframes } = track
   const count = keyframes.length / 2
@@ -46,32 +44,35 @@ function sample(track: AnimationTrack, t: number): number {
 }
 
 /**
- * Loads `<id>.anim` from `public/game/animations/` and starts playing it — pushes interpolated
- * values into {@link applyAnimatedValue}, the same sink the dev Theatre.js bridge writes to, so
- * `TitleScreen` (and future animated UI/cinematics) don't know or care which one is driving them.
+ * Loads `<id>.anim` (prod) / `<id>.anim.json` (dev) — one file per screen, containing every track
+ * keyframed on that screen's sheet — and starts playing all of them. Pushes interpolated values
+ * into {@link applyAnimatedValue} under each track's own id (e.g. `'title.opacity'`), the same sink
+ * the dev Theatre.js bridge writes to, so `TitleScreen` (and future animated UI/cinematics) don't
+ * know or care which one is driving them.
  */
 export async function playAnimation(id: string): Promise<void> {
   if (paused) return
-  let track: AnimationTrack
+  let tracks: AnimationTrackSet
   try {
-    // .json en dev (natif Theatre.js, committé) — .anim binaire en prod (généré au build, jamais
-    // committé). import.meta.env.DEV est remplacé statiquement par Vite, donc une seule des deux
-    // branches survit dans chaque bundle.
-    const ext = import.meta.env.DEV ? 'json' : 'anim'
-    track = await loadAnimation(assetPath('game', 'animations', `${id}.${ext}`))
+    const ext = import.meta.env.DEV ? 'anim.json' : 'anim'
+    tracks = await loadAnimation(`${id}.${ext}`)
   } catch (err) {
     console.info(`[AnimationPlayer] no baked animation for "${id}" yet`, err)
     return
   }
-  if (track.trackType !== TrackType.FLOAT) throw new Error(`AnimationPlayer: track type ${track.trackType} not implemented for "${id}"`)
-  playing.push({ id, track, elapsed: 0 })
+  for (const track of Object.values(tracks)) {
+    if (track.trackType !== TrackType.FLOAT) throw new Error(`AnimationPlayer: track type ${track.trackType} not implemented for "${id}"`)
+  }
+  playing.push({ tracks, elapsed: 0 })
 }
 
-/** Called every frame by `RenderManager._frame`. */
+/** Called every frame by `RenderManager._frame`. `delta` is milliseconds — Theatre positions are seconds. */
 export function updateAnimations(delta: number): void {
   if (paused) return
   for (const anim of playing) {
-    anim.elapsed += delta
-    applyAnimatedValue(anim.id, sample(anim.track, anim.elapsed))
+    anim.elapsed += delta / 1000
+    for (const [trackId, track] of Object.entries(anim.tracks)) {
+      applyAnimatedValue(trackId, sample(track, anim.elapsed))
+    }
   }
 }

@@ -4,10 +4,12 @@ import type { AssetsManagerApi } from '../core/AssetsManager'
 interface DevKeyboardShortcutDeps {
   assetsManager:  AssetsManagerApi
   onAuthoringKey: () => void
+  /** Cmd/Ctrl+S — exports the current Theatre.js scenarios to disk. No-op if authoring mode is off. */
+  onSaveKey: () => void
 }
 
-/** DEV-only keyboard shortcuts — Space/Enter simulate controller input for testing without a real controller; 'T' toggles Theatre.js authoring mode. */
-export function setupDevKeyboardShortcuts({ assetsManager, onAuthoringKey }: DevKeyboardShortcutDeps): void {
+/** DEV-only keyboard shortcuts — Space/Enter simulate controller input for testing without a real controller; 'T' toggles Theatre.js authoring mode; Cmd/Ctrl+S exports it to disk. */
+export function setupDevKeyboardShortcuts({ assetsManager, onAuthoringKey, onSaveKey }: DevKeyboardShortcutDeps): void {
   window.addEventListener('keydown', (e) => {
     const state = appOrchestrator.getSnapshot().value
 
@@ -22,6 +24,10 @@ export function setupDevKeyboardShortcuts({ assetsManager, onAuthoringKey }: Dev
     }
     if (e.key.toLowerCase() === 't') {
       onAuthoringKey()
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault()
+      onSaveKey()
     }
   })
 }

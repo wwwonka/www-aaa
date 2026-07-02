@@ -1,5 +1,6 @@
 import { UIScreen } from '../UIScreen'
 import { TitleMenuPanel } from '../panels/TitleMenuPanel'
+import { playAnimation } from '../../render/animation/AnimationPlayer'
 
 export class TitleScreen extends UIScreen {
   readonly layer = 'overlayUI' as const
@@ -21,8 +22,13 @@ export class TitleScreen extends UIScreen {
     return new TitleScreen(width, height, panel)
   }
 
+  // Override complet (pas de `super.onEnter()`) — ce screen n'utilise pas le tween fade
+  // easeIn/easeOut par défaut d'UIScreen, chaque sous-composant pilote sa propre opacité via
+  // AnimationRegistry. C'est ici, et nulle part ailleurs (pas RenderManager), que ce screen
+  // déclenche sa propre animation — idempotent, donc sûr à ré-invoquer (voir ScreenManager.replayCurrentReveal).
   onEnter(): void {
     this.node.eventMode = 'passive'
+    playAnimation('title-screen')
   }
 
   onLeave(): void {

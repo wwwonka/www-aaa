@@ -23,3 +23,8 @@ export function hideStudio(): void {
 export function restoreStudio(): void {
   studio.ui.restore()
 }
+
+/** The full on-disk project state (all sheets, all sequences) — same shape `studio` itself would persist. */
+export function getSaveFileContent(projectId: string): Record<string, unknown> {
+  return studio.createContentOfSaveFile(projectId)
+}

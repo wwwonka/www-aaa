@@ -39,5 +39,10 @@ export function initDev(deps: { assetsManager: AssetsManagerApi; renderApi: Rend
   setupDevKeyboardShortcuts({
     assetsManager:  deps.assetsManager,
     onAuthoringKey: () => toggleAuthoringMode(deps.renderApi),
+    onSaveKey: () => {
+      // Rien à exporter si Studio n'est même pas ouvert.
+      if (!authoringEnabled) return
+      import('./@theatre/export').then(({ exportScenarios }) => exportScenarios())
+    },
   })
 }

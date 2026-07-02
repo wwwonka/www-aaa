@@ -1,4 +1,5 @@
 import { Container } from 'pixi.js'
+import { registerAnimatable } from '../render/animation/AnimationRegistry'
 
 /**
  * Composition over inheritance: subclasses own a `.node` (the actual Pixi object added to the
@@ -21,6 +22,20 @@ export abstract class UIComponent {
     this.node.eventMode = value ? 'static' : 'none'
     this.node.cursor    = value ? 'pointer' : undefined
     if (value) this._wireEvents()
+  }
+
+  /**
+   * Opts this component into the generic transform properties Theatre.js can animate — no need to
+   * pre-decide which one you'll actually keyframe, they're all available in Studio from the start.
+   * `x`/`y` may fight a Yoga-managed position on a flex child; verify empirically if used there.
+   */
+  protected registerAnimatable(id: string): void {
+    registerAnimatable(`${id}.opacity`,  v => { this.node.alpha = v })
+    registerAnimatable(`${id}.x`,        v => { this.node.x = v })
+    registerAnimatable(`${id}.y`,        v => { this.node.y = v })
+    registerAnimatable(`${id}.scaleX`,   v => { this.node.scale.x = v })
+    registerAnimatable(`${id}.scaleY`,   v => { this.node.scale.y = v })
+    registerAnimatable(`${id}.rotation`, v => { this.node.rotation = v })
   }
 
   // Hit-testing relies on Pixi's automatic bounds for now — sufficient for rectangular

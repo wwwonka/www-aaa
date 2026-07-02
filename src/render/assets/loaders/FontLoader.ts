@@ -16,4 +16,4 @@ const fontLoader: IResourceLoader<FontFace> = {
   },
 }
 
-registerLoader(['otf', 'ttf', 'woff', 'woff2'], fontLoader)
+registerLoader(['otf', 'ttf', 'woff', 'woff2'], 'font', fontLoader)

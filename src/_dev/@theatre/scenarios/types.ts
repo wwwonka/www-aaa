@@ -4,13 +4,16 @@ import type { AppState } from '../../../core/AppOrchestrator'
 export interface AnimationObject {
   /**
    * Theatre.js object key within the sheet (shows up as the node name in Studio's outline).
-   * Also the registry namespace: each prop in `defaults` is pushed to `AnimationRegistry` under
+   * Also the registry namespace: each animated prop is pushed to `AnimationRegistry` under
    * `` `${objectKey}.${propKey}` `` — e.g. `objectKey: 'title'` + prop `'opacity'` → `'title.opacity'`.
    */
   objectKey: string
-  /** Initial prop values for `sheet.object(objectKey, defaults)` — one entry per animatable numeric prop. */
-  defaults: Record<string, number>
-  /** `[min, max]` clamp for the Theatre Studio slider, per prop key — e.g. `{ opacity: [0, 1] }`. */
+  /**
+   * Overrides the shared default transform props (opacity/x/y/scaleX/scaleY/rotation — see
+   * `bridge/index.ts`'s `DEFAULT_TRANSFORM_PROPS`) for this object only. Optional — most objects
+   * don't need to declare anything here, the defaults already expose every common property in Studio.
+   */
+  defaults?: Record<string, number>
   ranges?: Partial<Record<string, readonly [number, number]>>
 }
 
@@ -22,6 +25,11 @@ export interface AnimationObject {
 export interface AnimationScenario {
   /** Theatre.js sheet name (one per animated screen). */
   sheetName: string
+  /**
+   * Base filename under `public/game/anim/` — explicit, not derived from `sheetName`, to avoid any
+   * case-conversion logic (`title-screen.anim.json` for sheet `'TitleScreen'`).
+   */
+  fileName: string
   /** Orchestrator state whose entry should play this scenario's sequence. */
   triggerState: AppState
   objects: AnimationObject[]

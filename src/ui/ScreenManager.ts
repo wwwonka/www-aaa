@@ -48,6 +48,13 @@ export class ScreenManager {
     this._current = to
   }
 
+  /** Ré-invoque `onEnter()` du screen actuellement affiché — utilisé pour relancer son animation
+   *  (idempotent) après une pause externe (mode Authoring Theatre.js), sans passer par une vraie
+   *  transition et sans que l'appelant ait besoin de connaître le moindre id d'animation. */
+  replayCurrentReveal(): void {
+    if (this._current !== null) this._map.get(this._current)?.screen.onEnter()
+  }
+
   /** Forward per-frame delta to all registered screens. */
   update(delta: number): void {
     for (const { screen } of this._map.values()) screen.update(delta)

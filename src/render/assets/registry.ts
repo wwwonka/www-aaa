@@ -1,20 +1,27 @@
 import type { IResourceLoader } from './types'
 
-const registry = new Map<string, IResourceLoader<unknown>>()
-
-/**
- * Registers `loader` for one or more file extensions (without the leading dot, e.g. `'glb'`).
- * Open registry, not a fixed table — adding a new asset format (a future audio library, a
- * particle format, anything unforeseen today) never requires editing this file or `loadAsset.ts`:
- * write the new loader module and have it call this function on import (see `loaders/*.ts` and
- * `registerDefaultLoaders.ts`).
- */
-export function registerLoader(extensions: string[], loader: IResourceLoader<unknown>): void {
-  for (const ext of extensions) registry.set(ext, loader)
+interface RegistryEntry<T> {
+  loader: IResourceLoader<T>
+  /** Folder name under `public/<namespace>/` this asset type lives in — e.g. `'font'`, `'mesh'`. */
+  type: string
 }
 
-/** Looks up the loader registered for `ext` (no leading dot). Returns `undefined` if none matches. */
-export function getLoader(ext: string): IResourceLoader<unknown> | undefined {
+const registry = new Map<string, RegistryEntry<unknown>>()
+
+/**
+ * Registers `loader` for one or more file extensions (without the leading dot, e.g. `'glb'`),
+ * along with the folder `type` it lives under (e.g. `'mesh'`) — lets `loadAsset` resolve a bare
+ * filename (`loadAsset('fezbox.otf')`) to its full path without callers ever calling `assetPath()`
+ * themselves. Open registry, not a fixed table — adding a new asset format never requires editing
+ * this file or `loadAsset.ts`: write the new loader module and have it call this function on
+ * import (see `loaders/*.ts` and `registerDefaultLoaders.ts`).
+ */
+export function registerLoader(extensions: string[], type: string, loader: IResourceLoader<unknown>): void {
+  for (const ext of extensions) registry.set(ext, { loader, type })
+}
+
+/** Looks up the registry entry for `ext` (no leading dot). Returns `undefined` if none matches. */
+export function getLoaderEntry(ext: string): RegistryEntry<unknown> | undefined {
   return registry.get(ext)
 }
 

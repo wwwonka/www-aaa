@@ -12,7 +12,7 @@ import { InGameScreen }         from '../ui/screens/InGameScreen'
 import { startRenderLoop }      from './renderLoop'
 import type { AppState, AppEvent } from '../core/AppOrchestrator'
 import { applyAnimatedValue }   from './animation/AnimationRegistry'
-import { playAnimation, updateAnimations, pausePlayback, resumePlayback } from './animation/AnimationPlayer'
+import { updateAnimations, pausePlayback, resumePlayback } from './animation/AnimationPlayer'
 import { dispatchPointerEvent } from './events/pointerBridge'
 
 export class RenderManager {
@@ -28,7 +28,6 @@ export class RenderManager {
   private _targetFps!:      number
   private _stopLoop!:       () => void
   private _lastTime:        number = 0
-  private _currentState:    AppState | null = null
 
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
     this._canvas = canvas
@@ -75,7 +74,7 @@ export class RenderManager {
 
   resumeAnimationPlayback(): void {
     resumePlayback()
-    if (this._currentState) this._playScreenAnimations(this._currentState)
+    this._screenManager?.replayCurrentReveal()
   }
 
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
@@ -93,17 +92,6 @@ export class RenderManager {
       this._pauseBlur.exit()
     }
     this._screenManager?.transition(state)
-
-    this._currentState = state
-    this._playScreenAnimations(state)
-  }
-
-  /** Rejoue les binaires baked pour l'écran affiché — appelé à la transition, et à la reprise après une pause externe. */
-  private _playScreenAnimations(state: AppState): void {
-    if (state === 'TITLE_SCREEN') {
-      playAnimation('title.opacity')
-      playAnimation('connectController.opacity')
-    }
   }
 
   setFps(fps: number): void {

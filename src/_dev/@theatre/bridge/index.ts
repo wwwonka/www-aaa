@@ -4,14 +4,30 @@ import { initStudio } from '../studio'
 import { scenarios } from '../scenarios/_index'
 import type { AnimationObject } from '../scenarios/types'
 
-/** Builds Theatre object props, applying each prop's range (e.g. `[0, 1]` for a fade) when declared. */
+/**
+ * Shared transform props every animatable object gets in Studio by default — mirrors
+ * `UIComponent.registerAnimatable()`'s own set 1:1. Means a scenario never has to guess in advance
+ * which property it'll end up keyframing: opacity, position, scale and rotation are all already
+ * there, ready to scrub, without declaring anything per-object.
+ */
+const DEFAULT_TRANSFORM_PROPS = {
+  opacity:  types.number(1, { range: [0, 1] }),
+  x:        types.number(0, { range: [-2000, 2000] }),
+  y:        types.number(0, { range: [-2000, 2000] }),
+  scaleX:   types.number(1, { range: [0, 4] }),
+  scaleY:   types.number(1, { range: [0, 4] }),
+  rotation: types.number(0, { range: [-Math.PI, Math.PI] }),
+}
+
+/** Builds Theatre object props: the shared default set, overridden per-key by whatever a scenario explicitly declares. */
 function buildProps(object: AnimationObject): Record<string, ReturnType<typeof types.number> | number> {
-  return Object.fromEntries(
-    Object.entries(object.defaults).map(([key, value]) => {
+  const overrides = Object.fromEntries(
+    Object.entries(object.defaults ?? {}).map(([key, value]) => {
       const range = object.ranges?.[key]
       return [key, range ? types.number(value, { range: [...range] }) : value]
     }),
   )
+  return { ...DEFAULT_TRANSFORM_PROPS, ...overrides }
 }
 
 /**

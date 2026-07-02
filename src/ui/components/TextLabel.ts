@@ -1,6 +1,5 @@
 import { Text, TextStyle } from 'pixi.js'
 import { UIComponent } from '../UIComponent'
-import { registerAnimatable } from '../../render/animation/AnimationRegistry'
 
 interface TextLabelOptions {
   text:     string
@@ -9,9 +8,9 @@ interface TextLabelOptions {
   /** Additional hook beyond the default hover tint — e.g. sound, cursor changes elsewhere. */
   onHover?: (hovering: boolean) => void
   /**
-   * Registers this label's own opacity as an independent `AnimationRegistry` target under
-   * `` `${animatableId}.opacity` `` — lets a scenario animate this subcomponent on its own
-   * timeline (staggered fade-in, etc.) instead of only the whole screen at once.
+   * Registers this label's transform properties (opacity, x, y, scale, rotation) as independent
+   * `AnimationRegistry` targets under `` `${animatableId}.<prop>` `` — lets a scenario animate this
+   * subcomponent on its own timeline (staggered fade-in, etc.) instead of only the whole screen at once.
    */
   animatableId?: string
 }
@@ -33,7 +32,7 @@ export class TextLabel extends UIComponent {
     const fontSize = typeof style?.fontSize === 'number' ? style.fontSize : 16
     this.node.layout = { width: 'intrinsic', height: fontSize * 1.3 }
 
-    if (animatableId) registerAnimatable(`${animatableId}.opacity`, (opacity) => { this.node.alpha = opacity })
+    if (animatableId) this.registerAnimatable(animatableId)
 
     this.onClick = onClick
     this.onHover = (isOver) => {
