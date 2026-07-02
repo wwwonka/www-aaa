@@ -10,6 +10,7 @@ import { setupDevTools }                   from '../setup'
 // seront rajoutées à RenderManager quand on implémente le debug tooling complet.
 // En attendant, on cast en any pour garder le fichier compilable.
 
+/** DEV-only "monolith" bootstrap — single-window entry point wiring RenderManager, the app orchestrator, resize/visibility handling and dev tools directly, without the worker split used in prod. */
 export async function startMonolithMode(): Promise<void> {
   const ctx = detectAppContext()
   installBrowserGuards()

@@ -96,8 +96,9 @@ export function updateAnimations(delta: number): void {
   if (paused) return
   for (const anim of playing) {
     anim.elapsed += delta / 1000
-    for (const [trackId, track] of Object.entries(anim.tracks)) {
-      applyAnimatedValue(trackId, sample(track, anim.elapsed))
+    // for...in instead of Object.entries — avoids allocating an array of [key, value] pairs every frame per playing animation.
+    for (const trackId in anim.tracks) {
+      applyAnimatedValue(trackId, sample(anim.tracks[trackId], anim.elapsed))
     }
   }
 }

@@ -1,4 +1,11 @@
-// Retourne un stop() pour pouvoir arrêter la boucle proprement (pause, dispose)
+/**
+ * Drives a `requestAnimationFrame` loop capped at `targetFps`, calling `onFrame` with the
+ * current timestamp once per allowed interval.
+ *
+ * @param onFrame - Called once per rendered frame with the rAF timestamp.
+ * @param targetFps - Frame rate cap; frames arriving faster than this are skipped.
+ * @returns A `stop()` function to cancel the loop cleanly (pause, dispose).
+ */
 export function startRenderLoop(onFrame: (ts: number) => void, targetFps = 60): () => void {
   const frameDuration = 1000 / targetFps
   let lastTime = 0

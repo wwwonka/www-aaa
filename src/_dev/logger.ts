@@ -1,13 +1,16 @@
 type LogFn = (...args: unknown[]) => void
 
-// Returns a styled console.log bound to a named tag. Call sites stay clean —
-// all the %c noise lives here. Never imported in prod (see contextDetect.ts).
+/**
+ * Returns a styled console.log bound to a named tag. Call sites stay clean —
+ * all the %c noise lives here. Never imported in prod (see contextDetect.ts).
+ */
 export function createLogger(tag: string, bg: string, fg = '#fff'): LogFn {
   const tagStyle  = `color:${fg};background:${bg};padding:2px 6px;border-radius:4px;font-weight:700`
   const prefix    = [`%c${tag}%c`, tagStyle, '']
   return (...args) => console.log(...prefix, ...args)
 }
 
+/** Returns a styled console.groupCollapsed/row helper bound to a named tag, for structured DEV logs. */
 export function createGroupLogger(tag: string, bg: string, fg = '#fff') {
   const tagStyle  = `color:${fg};background:${bg};padding:2px 6px;border-radius:4px;font-weight:700`
 

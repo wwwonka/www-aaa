@@ -10,6 +10,8 @@ export interface RuntimeContext {
   category: RuntimeCategory
 }
 
+/** Nom du navigateur pour l'affichage debug — n'a pas besoin d'être exhaustif ni exact hors DEV. */
+
 function detectBrowserName(ua: string): string {
   if (/Firefox/.test(ua))                                      return 'Firefox'
   if (/Edg\//.test(ua))                                        return 'Edge'
@@ -28,6 +30,10 @@ const CATEGORY_LABELS: Record<RuntimeCategory, string> = {
   'pwa-mobile-android':   'PWA Android (Mobile)',
 }
 
+/**
+ * Détecte dans quel contexte l'app tourne (onglet navigateur vs PWA installée, et sur quelle
+ * plateforme) à partir du display-mode CSS et de l'UA — aucune de ces sources n'est fiable seule.
+ */
 export function detectRuntimeContext(): RuntimeContext {
   const ua = navigator.userAgent
 

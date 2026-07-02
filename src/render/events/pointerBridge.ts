@@ -1,5 +1,6 @@
 import type { WebGLRenderer } from 'pixi.js'
 
+/** Relayed pointer/mouse event payload, as forwarded from `src/app/events/pointerHandler.ts` on the main thread. */
 export interface RelayedPointerData {
   eventType: string
   x:         number

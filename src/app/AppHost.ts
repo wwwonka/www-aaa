@@ -10,7 +10,16 @@ import type { AssetsManagerApi }          from '../core/AssetsManager'
 import { allocateSystems }                from '../core/SystemAllocator'
 import type { SystemHostApi }             from '../core/SystemHost.worker'
 
+/**
+ * Boots the app shell: detects the runtime context, installs browser guards, spins up the
+ * assets manager (worker or inline, per {@link allocateSystems}), transfers the canvas to the
+ * render worker, and wires the orchestrator's screen transitions to the renderer.
+ */
 export class AppHost {
+  /**
+   * Runs the full startup sequence and returns the live handles the caller needs
+   * once the canvas has been handed off to the render worker.
+   */
   async start(): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
     const ctx = detectAppContext()
     installBrowserGuards()

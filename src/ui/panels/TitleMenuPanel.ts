@@ -19,25 +19,25 @@ export class TitleMenuPanel extends UIComponent {
     }
 
     const title = new TextLabel({
-      text:         'TITLE\nSCREEN',
-      style:        { 
-        fill: 0xffffff, 
-        fontSize: 270, 
-        fontFamily: 'fezbox',
-        align: 'center',
-        letterSpacing: 4 
+      text:  'TITLE\nSCREEN',
+      style: {
+        fill:          0xffffff,
+        fontSize:      270,
+        fontFamily:    'fezbox',
+        align:         'center',
+        letterSpacing: 4,
       },
       animatableId: 'title',
     })
 
     const connectController = new TextLabel({
-      text:         'CONNECT CONTROLLER',
-      style:        { 
-        fill: 0xaaaaaa, 
-        fontSize: 30, 
-        fontFamily: 'fezbox',
-        align: 'center',
-        letterSpacing: 2
+      text:  'CONNECT CONTROLLER',
+      style: {
+        fill:          0xaaaaaa,
+        fontSize:      30,
+        fontFamily:    'fezbox',
+        align:         'center',
+        letterSpacing: 2,
       },
       onClick:      onConnectController,
       animatableId: 'connectController',
@@ -53,8 +53,8 @@ export class TitleMenuPanel extends UIComponent {
    */
   static async create(onConnectController: () => void): Promise<TitleMenuPanel> {
     const face = await loadFont('fezbox.otf')
-    ;(self as unknown as WorkerGlobalScope & { 
-      fonts: FontFaceSet 
+    ;(self as unknown as WorkerGlobalScope & {
+      fonts: FontFaceSet
     }).fonts.add(face)
     return new TitleMenuPanel(onConnectController)
   }

@@ -33,5 +33,6 @@ export interface AnimationScenario {
   fileName: string
   /** Orchestrator state whose entry should play this scenario's sequence. */
   triggerState: AppState
+  /** Independently animatable subcomponents of the screen, all sharing this scenario's sheet. */
   objects: AnimationObject[]
 }

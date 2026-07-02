@@ -1,6 +1,7 @@
 import { appOrchestrator } from '../core/AppOrchestrator'
 import type { AssetsManagerApi } from '../core/AssetsManager'
 
+/** Dependencies injected into {@link setupDevKeyboardShortcuts}. */
 interface DevKeyboardShortcutDeps {
   assetsManager:  AssetsManagerApi
   onAuthoringKey: () => void

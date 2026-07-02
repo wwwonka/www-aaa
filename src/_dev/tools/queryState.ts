@@ -17,6 +17,7 @@ const STATE_EVENTS: Partial<Record<AppState, () => void>> = {
   },
 }
 
+/** Reads `?state=` from the URL and jumps the app orchestrator straight there, skipping menus. No-op if absent/unrecognized. */
 export function applyQueryStateShortcut(): void {
   const target = new URLSearchParams(location.search).get('state') as AppState | null
   if (!target) return

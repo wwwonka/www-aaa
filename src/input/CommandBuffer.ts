@@ -7,13 +7,16 @@ export type GameCommand =
 
 // Buffer circulaire de commandes — lu par la simulation à chaque tick
 // TODO: implémenter avec un SAB partagé pour éviter les postMessage
+/** Accumule les commandes émises entre deux ticks de simulation, à drainer via {@link flush}. */
 export class CommandBuffer {
   private _queue: GameCommand[] = []
 
+  /** Enfile une commande, en attente du prochain {@link flush}. */
   push(cmd: GameCommand): void {
     this._queue.push(cmd)
   }
 
+  /** Vide le buffer et retourne les commandes accumulées, dans l'ordre d'arrivée. */
   flush(): GameCommand[] {
     const cmds  = this._queue
     this._queue = []

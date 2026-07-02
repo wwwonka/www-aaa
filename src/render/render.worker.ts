@@ -43,6 +43,7 @@ const api = {
   },
 }
 
+/** Comlink surface exposed by this worker — mirrors `RenderManager`'s public methods 1:1. */
 export type RenderWorkerApi = typeof api
 
 Comlink.expose(api)
