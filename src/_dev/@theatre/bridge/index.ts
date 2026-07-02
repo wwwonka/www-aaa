@@ -19,7 +19,12 @@ const DEFAULT_TRANSFORM_PROPS = {
   rotation: types.number(0, { range: [-Math.PI, Math.PI] }),
 }
 
-/** Builds Theatre object props: the shared default set, overridden per-key by whatever a scenario explicitly declares. */
+/**
+ * Builds Theatre object props: the shared default set, overridden per-key by whatever a scenario explicitly declares.
+ *
+ * @param object - Scenario object descriptor (may override a subset of {@link DEFAULT_TRANSFORM_PROPS}).
+ * @returns Props to pass to `sheet.object(objectKey, props)`.
+ */
 function buildProps(object: AnimationObject): Record<string, ReturnType<typeof types.number> | number> {
   const overrides = Object.fromEntries(
     Object.entries(object.defaults ?? {}).map(([key, value]) => {
@@ -38,6 +43,9 @@ function buildProps(object: AnimationObject): Record<string, ReturnType<typeof t
  * subcomponent registered itself under via `registerAnimatable()`. Plays a scenario's sequence
  * when the orchestrator enters its `triggerState` — same role `AppHost.ts` already has for
  * `renderApi.showScreen`, just for animation instead of screen visibility.
+ *
+ * @param orchestrator - App state machine; drives which scenario's sequence plays and when.
+ * @param applyAnimatedValue - Sink for live-edited values, e.g. `renderApi.applyExternalValue` (Comlink call into the render worker).
  */
 export function setupTheatreBridge(
   orchestrator: AppOrchestrator,

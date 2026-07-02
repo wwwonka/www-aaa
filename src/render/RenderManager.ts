@@ -29,6 +29,11 @@ export class RenderManager {
   private _stopLoop!:       () => void
   private _lastTime:        number = 0
 
+  /**
+   * @param canvas - The `OffscreenCanvas` transferred from the main thread; Babylon and Pixi share
+   * its single WebGL2 context (see project constraints — never two canvases/contexts).
+   * @param targetFps - Initial render loop target; see {@link setFps}.
+   */
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
     this._canvas = canvas
     this._width  = canvas.width  || 800
@@ -62,7 +67,12 @@ export class RenderManager {
     this._listenMessages()
   }
 
-  /** Generic entry point for external value injection (dev bridge via Comlink, or any future driver). */
+  /**
+   * Generic entry point for external value injection (dev bridge via Comlink, or any future driver).
+   *
+   * @param id - Registry id, e.g. `'title.opacity'` — matches what a `UIComponent` registered via `registerAnimatable`.
+   * @param value - The value to apply.
+   */
   applyExternalValue(id: string, value: number): void {
     applyAnimatedValue(id, value)
   }
@@ -72,11 +82,13 @@ export class RenderManager {
     pausePlayback()
   }
 
+  /** Re-enables playback and immediately restarts the current screen's animation (see `ScreenManager.replayCurrentReveal`). */
   resumeAnimationPlayback(): void {
     resumePlayback()
     this._screenManager?.replayCurrentReveal()
   }
 
+  /** @param fn - Callback invoked whenever a screen (e.g. `PauseScreen`) needs to send an `AppEvent` back to the state machine. */
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
     this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI)
 
@@ -85,6 +97,7 @@ export class RenderManager {
     this._screenManager.register('IN_GAME',      new InGameScreen(this._width, this._height))
   }
 
+  /** @param state - The `AppState` to display; also drives the pause-blur transition. */
   showScreen(state: AppState): void {
     if (state === 'PAUSED') {
       this._pauseBlur.enter()
@@ -94,6 +107,7 @@ export class RenderManager {
     this._screenManager?.transition(state)
   }
 
+  /** @param fps - New render loop target; restarts the loop with the new interval. */
   setFps(fps: number): void {
     this._targetFps = fps
     this._stopLoop()

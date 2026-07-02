@@ -14,6 +14,7 @@ export interface AnimationObject {
    * don't need to declare anything here, the defaults already expose every common property in Studio.
    */
   defaults?: Record<string, number>
+  /** `[min, max]` Studio slider clamp per overridden prop key — only meaningful alongside `defaults`. */
   ranges?: Partial<Record<string, readonly [number, number]>>
 }
 

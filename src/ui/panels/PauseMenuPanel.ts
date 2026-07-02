@@ -6,9 +6,14 @@ const PANEL_W = 280
 const PANEL_H = 200
 const RADIUS  = 16
 
+/** Frosted-card pause menu: title, separator, Resume/Quit buttons. */
 export class PauseMenuPanel extends UIComponent {
   readonly node: Container
 
+  /**
+   * @param onResume - Click handler for "Resume".
+   * @param onQuit - Click handler for "Quit to title".
+   */
   constructor(
     onResume: () => void,
     onQuit:   () => void,

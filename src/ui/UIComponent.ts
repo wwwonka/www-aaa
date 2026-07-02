@@ -28,6 +28,9 @@ export abstract class UIComponent {
    * Opts this component into the generic transform properties Theatre.js can animate — no need to
    * pre-decide which one you'll actually keyframe, they're all available in Studio from the start.
    * `x`/`y` may fight a Yoga-managed position on a flex child; verify empirically if used there.
+   *
+   * @param id - Registry namespace for this component (matches its Theatre object key) — each
+   * prop is registered as `` `${id}.<prop>` `` (e.g. `'title.opacity'`).
    */
   protected registerAnimatable(id: string): void {
     registerAnimatable(`${id}.opacity`,  v => { this.node.alpha = v })

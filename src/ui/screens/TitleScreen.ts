@@ -2,6 +2,7 @@ import { UIScreen } from '../UIScreen'
 import { TitleMenuPanel } from '../panels/TitleMenuPanel'
 import { playAnimation } from '../../render/animation/AnimationPlayer'
 
+/** The game's title/attract screen — subcomponents fade in independently via Theatre.js-authored (or hand-baked) animation, triggered from {@link TitleScreen.onEnter}. */
 export class TitleScreen extends UIScreen {
   readonly layer = 'overlayUI' as const
 

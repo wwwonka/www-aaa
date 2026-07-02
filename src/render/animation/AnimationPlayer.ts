@@ -3,6 +3,7 @@ import { applyAnimatedValue } from './AnimationRegistry'
 import { TrackType, type AnimationTrack, type AnimationTrackSet } from '../assets/loaders/AnimationLoader'
 
 interface PlayingAnimation {
+  readonly id:     string
   readonly tracks: AnimationTrackSet
   elapsed:         number
 }
@@ -13,16 +14,25 @@ const playing: PlayingAnimation[] = []
 // valeurs à la place, ou autre chose plus tard). Voir `RenderManager.pauseAnimationPlayback()`.
 let paused = false
 
+/** Stops all playback and drops every in-flight animation — see `RenderManager.pauseAnimationPlayback()`. */
 export function pausePlayback(): void {
   paused = true
   playing.length = 0
 }
 
+/** Re-enables `playAnimation`/`updateAnimations` after {@link pausePlayback}. Does not resume anything on its own — callers must re-invoke `playAnimation` for whatever should be playing. */
 export function resumePlayback(): void {
   paused = false
 }
 
-/** LERPs `track`'s [time, value] keyframes at `t` (seconds — Theatre.js's own sequence position unit). Only `FLOAT` tracks are implemented — see `AnimationLoader.ts`. */
+/**
+ * LERPs `track`'s `[time, value]` keyframes at `t` (seconds — Theatre.js's own sequence position
+ * unit). Only `FLOAT` tracks are implemented — see `AnimationLoader.ts`.
+ *
+ * @param track - Source keyframes, sorted by ascending time.
+ * @param t - Sample time in seconds. Clamped to the track's first/last keyframe if out of range.
+ * @returns The interpolated value at `t`.
+ */
 function sample(track: AnimationTrack, t: number): number {
   const { keyframes } = track
   const count = keyframes.length / 2
@@ -49,6 +59,10 @@ function sample(track: AnimationTrack, t: number): number {
  * into {@link applyAnimatedValue} under each track's own id (e.g. `'title.opacity'`), the same sink
  * the dev Theatre.js bridge writes to, so `TitleScreen` (and future animated UI/cinematics) don't
  * know or care which one is driving them.
+ *
+ * @param id - Base filename under `public/game/anim/` (no extension) — matches an
+ * `AnimationScenario.fileName`, e.g. `'title-screen'`.
+ * @throws If a loaded track has a `trackType` other than `FLOAT` (unimplemented — see `AnimationLoader.ts`).
  */
 export async function playAnimation(id: string): Promise<void> {
   if (paused) return
@@ -63,10 +77,21 @@ export async function playAnimation(id: string): Promise<void> {
   for (const track of Object.values(tracks)) {
     if (track.trackType !== TrackType.FLOAT) throw new Error(`AnimationPlayer: track type ${track.trackType} not implemented for "${id}"`)
   }
-  playing.push({ tracks, elapsed: 0 })
+  // Remplace toute lecture en cours pour ce même id plutôt que d'empiler — un screen dont
+  // `onEnter()` est ré-invoqué (ex. `ScreenManager.replayCurrentReveal()` après le mode Authoring,
+  // ou une simple revisite de l'écran) ne doit pas accumuler une entrée `playing` par visite.
+  const existing = playing.findIndex(anim => anim.id === id)
+  const next = { id, tracks, elapsed: 0 }
+  if (existing !== -1) playing[existing] = next
+  else playing.push(next)
 }
 
-/** Called every frame by `RenderManager._frame`. `delta` is milliseconds — Theatre positions are seconds. */
+/**
+ * Advances every playing animation and pushes freshly-sampled values to {@link applyAnimatedValue}.
+ * Called every frame by `RenderManager._frame`.
+ *
+ * @param delta - Elapsed time since the last frame, in **milliseconds** (converted to seconds internally — Theatre positions are seconds).
+ */
 export function updateAnimations(delta: number): void {
   if (paused) return
   for (const anim of playing) {

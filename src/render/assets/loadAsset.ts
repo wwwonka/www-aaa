@@ -38,6 +38,12 @@ async function loadAssetUncached<T>(path: string, ctx: LoaderContext, entry: Non
  * Resolved entries stay cached forever (re-parsing a glTF isn't free, and callers expect the same
  * instance back); rejected entries are evicted so a transient failure doesn't permanently poison
  * the cache.
+ *
+ * @param filename - Bare filename, e.g. `'fezbox.otf'` — no path, no `assetPath()` needed.
+ * @param ctx - Loader-specific context (e.g. `{ scene }` for mesh/texture loaders).
+ * @param namespace - `public/<namespace>/` root; defaults to `'game'` (runtime game assets, as opposed to `'app'` shell assets).
+ * @returns The parsed asset, typed by the caller (loaders are untyped internally — see the `T` wrappers below for the typed surface).
+ * @throws If no loader is registered for `filename`'s extension.
  */
 export function loadAsset<T>(filename: string, ctx: LoaderContext = {}, namespace: AssetNamespace = 'game'): Promise<T> {
   const ext   = extensionOf(filename)

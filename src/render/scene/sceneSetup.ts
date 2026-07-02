@@ -3,6 +3,7 @@ import { createCamera } from './camera'
 import { createLights }  from './lights'
 import { loadMesh }      from '../assets/loadAsset'
 
+/** One-time 3D scene bootstrap — camera, lights, and the demo mesh. Called once by `RenderManager.init()`. */
 export async function sceneSetup(_engine: Engine, scene: Scene): Promise<void> {
   createCamera(scene)
   createLights(scene)

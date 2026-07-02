@@ -1,11 +1,16 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js'
 import { UIComponent } from '../UIComponent'
 
+/** A rounded, always-interactive text button. */
 export class Button extends UIComponent {
   readonly node: Container
 
   private _bg: Graphics
 
+  /**
+   * @param label - Button text.
+   * @param onClick - Click handler; wired via `UIComponent.interactive = true`.
+   */
   constructor(label: string, onClick: () => void) {
     super()
 

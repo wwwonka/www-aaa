@@ -5,11 +5,13 @@ import type { AppEvent }   from '../../core/AppOrchestrator'
 
 type SendFn = (event: AppEvent) => void
 
+/** Overlay shown while `IN_GAME` is paused — centers a `PauseMenuPanel`. */
 export class PauseScreen extends UIScreen {
   readonly layer = 'overlayUI' as const
 
   private readonly _panel: PauseMenuPanel
 
+  /** @param send - Dispatches `RESUME`/`QUIT` back to the app state machine. */
   constructor(send: SendFn, width: number, height: number) {
     super(width, height)
 

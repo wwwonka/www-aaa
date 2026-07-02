@@ -1,20 +1,26 @@
 import { registerLoader } from '../registry'
 import type { IResourceLoader } from '../types'
 
-// Réservés — VECTOR3/QUATERNION pas encore implémentés, aucun consommateur aujourd'hui (le player
-// ne gère que FLOAT tant qu'un vrai second besoin — mesh/caméra — ne justifie l'ajout du code
-// d'interpolation Vector3/Quaternion). Objet plain plutôt que `const enum`, incompatible avec
-// `erasableSyntaxOnly`.
+/**
+ * Discriminates the shape of {@link AnimationTrack.keyframes}. Plain object rather than a
+ * `const enum` — incompatible with `erasableSyntaxOnly`.
+ *
+ * @remarks
+ * `VECTOR3`/`QUATERNION` are reserved but unimplemented — no consumer needs them today, and the
+ * player only handles `FLOAT` until a real second need (mesh/camera animation) justifies adding
+ * Vector3/Quaternion interpolation code.
+ */
 export const TrackType = { FLOAT: 0, VECTOR3: 1, QUATERNION: 2 } as const
 export type TrackType = typeof TrackType[keyof typeof TrackType]
 
+/** One keyframed curve for a single animatable property (e.g. `'title.opacity'`). */
 export interface AnimationTrack {
   trackType: TrackType
-  /** Paires [time, value] à plat, triées par time croissant. */
+  /** Flat `[time, value]` pairs, sorted by ascending time. */
   keyframes: Float32Array
 }
 
-/** Un fichier = un écran (sheet Theatre), potentiellement plusieurs pistes — une par `objectKey.prop` keyframé. */
+/** One file's worth of tracks — a screen (Theatre sheet) may keyframe several `objectKey.prop` pairs at once. */
 export type AnimationTrackSet = Record<string, AnimationTrack>
 
 /**

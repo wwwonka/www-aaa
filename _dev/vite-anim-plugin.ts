@@ -3,7 +3,13 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, rmSync
 import { join } from 'path'
 import { extractSheetTracks, type TheatreOnDiskState, type FlatAnimationTrack } from '../src/_dev/assets/theatreState'
 
-/** Mirrors `AnimationLoader.ts`'s parse — u16 trackCount, then per track u8 idLength + id UTF-8 + u8 trackType + u16 keyframeCount + float32 pairs. */
+/**
+ * Mirrors `AnimationLoader.ts`'s parse — u16 trackCount, then per track u8 idLength + id UTF-8 +
+ * u8 trackType + u16 keyframeCount + float32 pairs.
+ *
+ * @param tracks - Flattened tracks (see `theatreState.ts#extractSheetTracks`), keyed by `objectKey.propName`.
+ * @returns The compact `.anim` binary payload, ready to write to disk.
+ */
 function encodeAnim(tracks: Record<string, FlatAnimationTrack>): Buffer {
   const entries = Object.entries(tracks)
   const chunks: Buffer[] = []
@@ -48,6 +54,9 @@ const ANIM_DIR = join('public', 'game', 'anim')
  *    `AnimationLoader.ts` reads in production, and removes the copied `.json` from the output so a
  *    production bundle never ships (or references) animation JSON. Never touches the source
  *    `public/` directory — only `dist/`.
+ *
+ * @returns A Vite `Plugin` wiring both the dev middleware (`configureServer`) and the build-time
+ * conversion (`writeBundle`).
  */
 export default function animPlugin(): Plugin {
   return {
@@ -71,6 +80,9 @@ export default function animPlugin(): Plugin {
       const outDir  = options.dir ?? 'dist'
       const destDir = join(outDir, 'game', 'anim')
       if (!existsSync(ANIM_DIR)) return
+      // Existe normalement déjà (Vite y a copié les .json sources avant ce hook), mais ne pas en
+      // dépendre — copyPublicDir pourrait être désactivé, ou ce dossier vide côté source.
+      mkdirSync(destDir, { recursive: true })
 
       for (const file of readdirSync(ANIM_DIR)) {
         if (!file.endsWith('.anim.json')) continue

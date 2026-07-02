@@ -24,7 +24,12 @@ export function restoreStudio(): void {
   studio.ui.restore()
 }
 
-/** The full on-disk project state (all sheets, all sequences) — same shape `studio` itself would persist. */
+/**
+ * The full on-disk project state (all sheets, all sequences) — same shape `studio` itself would persist.
+ *
+ * @param projectId - Theatre project id, e.g. `'GameUI'`.
+ * @returns Untyped `Record` — see `theatreState.ts#TheatreOnDiskState` for the narrow shape this codebase actually reads.
+ */
 export function getSaveFileContent(projectId: string): Record<string, unknown> {
   return studio.createContentOfSaveFile(projectId)
 }

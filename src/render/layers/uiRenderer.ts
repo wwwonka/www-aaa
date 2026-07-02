@@ -32,6 +32,11 @@ export interface UIRenderer {
   destroy:        () => void
 }
 
+/**
+ * @param gl - The shared WebGL2 context Babylon already owns — Pixi renders into it directly (no separate canvas/context, per project constraints).
+ * @param width - Initial viewport width, in pixels.
+ * @param height - Initial viewport height, in pixels.
+ */
 export async function createUIRenderer(
   gl:     WebGL2RenderingContext,
   width:  number,

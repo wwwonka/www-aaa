@@ -45,7 +45,14 @@ export abstract class UIScreen {
     this.node.layout    = this._layoutStyle
   }
 
-  /** Fade in and enable interactions. */
+  /**
+   * Fade in and enable interactions. Subclasses with bespoke reveal behavior (e.g. `TitleScreen`,
+   * whose subcomponents animate their own opacity via `AnimationRegistry`) override this entirely
+   * without calling `super.onEnter()` — this base implementation is the default tween only, not a
+   * lifecycle hook that always runs.
+   *
+   * @param duration - Fade-in duration in milliseconds.
+   */
   onEnter(duration = 250): void {
     this._tweenDir      = 'in'
     this._tweenElapsed  = 0
@@ -53,7 +60,11 @@ export abstract class UIScreen {
     this.node.eventMode = 'passive'
   }
 
-  /** Disable interactions immediately, then fade out. */
+  /**
+   * Disable interactions immediately, then fade out.
+   *
+   * @param duration - Fade-out duration in milliseconds.
+   */
   onLeave(duration = 250): void {
     this._tweenDir      = 'out'
     this._tweenElapsed  = 0
@@ -61,7 +72,11 @@ export abstract class UIScreen {
     this.node.eventMode = 'none'
   }
 
-  /** Called every frame by `ScreenManager`. */
+  /**
+   * Called every frame by `ScreenManager`.
+   *
+   * @param delta - Elapsed time since the last frame, in milliseconds.
+   */
   update(delta: number): void {
     if (this._tweenDir === null) return
     this._tweenElapsed += delta
@@ -70,7 +85,12 @@ export abstract class UIScreen {
     if (t >= 1) this._tweenDir = null
   }
 
-  /** Propagate resize from `ScreenManager` — implement `onResize` in subclasses. */
+  /**
+   * Propagate resize from `ScreenManager` — implement `onResize` in subclasses.
+   *
+   * @param width - New viewport width, in pixels.
+   * @param height - New viewport height, in pixels.
+   */
   resize(width: number, height: number): void {
     this._width       = width
     this._height      = height

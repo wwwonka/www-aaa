@@ -19,6 +19,7 @@ interface TextLabelOptions {
 export class TextLabel extends UIComponent {
   readonly node: Text
 
+  /** @param options - See {@link TextLabelOptions}. */
   constructor({ text, style, onClick, onHover, animatableId }: TextLabelOptions) {
     super()
 

@@ -14,6 +14,8 @@ let bridgeInitialized = false
  * Toggles Theatre.js authoring mode on 'T'. `@theatre/studio` is only ever imported here, inside
  * this function body — never at module load — so a DEV refresh never pays its cost unless
  * explicitly requested. Off by default: the game boots in "Play" mode, same as prod.
+ *
+ * @param renderApi - Comlink proxy into the render worker; used to pause/resume baked playback and to receive live-edited values.
  */
 export async function toggleAuthoringMode(renderApi: RenderWorkerApi): Promise<void> {
   if (!authoringEnabled) {
@@ -35,6 +37,7 @@ export async function toggleAuthoringMode(renderApi: RenderWorkerApi): Promise<v
   }
 }
 
+/** DEV-only entry point — call once from `main.ts` behind `import.meta.env.DEV`. Wires the 'T'/Cmd+S shortcuts; never imports `@theatre/studio` itself (see {@link toggleAuthoringMode}). */
 export function initDev(deps: { assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }): void {
   setupDevKeyboardShortcuts({
     assetsManager:  deps.assetsManager,

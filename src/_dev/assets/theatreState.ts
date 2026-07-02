@@ -29,6 +29,10 @@ export interface FlatAnimationTrack {
  * Flattens one sheet's `sequence.tracksByObject` into `{ "objectKey.propName": track }`.
  * `staticOverrides` is never read — a property adjusted in Studio without ever being keyframed
  * isn't "animated", so it never ships in the exported file or the compiled binary.
+ *
+ * @param state - Full project state, as returned by `studio.createContentOfSaveFile()`.
+ * @param sheetName - Theatre sheet to extract (one per animated screen).
+ * @returns Tracks keyed by `` `${objectKey}.${propName}` ``, empty if the sheet has no sequence data.
  */
 export function extractSheetTracks(state: TheatreOnDiskState, sheetName: string): Record<string, FlatAnimationTrack> {
   const tracksByObject = state.sheetsById[sheetName]?.sequence?.tracksByObject ?? {}

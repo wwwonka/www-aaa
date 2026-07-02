@@ -30,7 +30,13 @@ const POINTER_TO_MOUSE: Record<string, string> = {
   pointerout:  'mouseout',
 }
 
-/** Dispatches a relayed main-thread pointer event onto whichever target Pixi's `EventSystem` actually listens on. */
+/**
+ * Dispatches a relayed main-thread pointer event onto whichever target Pixi's `EventSystem` actually listens on.
+ *
+ * @param canvas - The render worker's `OffscreenCanvas` — target for `pointerdown`/`over`/`out`/`leave`/`wheel`.
+ * @param renderer - Pixi's `WebGLRenderer`; used only to check `events.supportsPointerEvents` for the mouse-event fallback.
+ * @param data - Relayed event payload from `src/app/events/pointerHandler.ts` (already in physical pixels).
+ */
 export function dispatchPointerEvent(canvas: OffscreenCanvas, renderer: WebGLRenderer, data: RelayedPointerData): void {
   const usesPointerEvents = renderer.events.supportsPointerEvents
   const type = usesPointerEvents || !(data.eventType in POINTER_TO_MOUSE) ? data.eventType : POINTER_TO_MOUSE[data.eventType]
