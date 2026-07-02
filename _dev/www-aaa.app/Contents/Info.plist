@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>app_mode_loader</string>
+	<key>CFBundleIconFile</key>
+	<string>app.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.microsoft.edgemac.Dev.app.pknnpfhgegcffnecdaefnaofckaafggg</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>www-aaa</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string></string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.microsoft.edgemac.Dev.app.pknnpfhgegcffnecdaefnaofckaafggg</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>web+aaa</string>
+				<string>web+www</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>4119.1</string>
+	<key>CrAppModeIsAdhocSigned</key>
+	<true/>
+	<key>CrAppModeShortcutID</key>
+	<string>pknnpfhgegcffnecdaefnaofckaafggg</string>
+	<key>CrAppModeShortcutName</key>
+	<string>www-aaa</string>
+	<key>CrAppModeShortcutURL</key>
+	<string>https://macbook.local:5173/</string>
+	<key>CrAppModeUserDataDir</key>
+	<string>/Users/julien/Library/Application Support/Microsoft Edge Dev/-/Web Applications/_crx__pknnpfhgegcffnecdaefnaofckaafggg</string>
+	<key>CrBundleIdentifier</key>
+	<string>com.microsoft.edgemac.Dev</string>
+	<key>CrBundleVersion</key>
+	<string>151.0.4119.1</string>
+	<key>DTCompiler</key>
+	<string>com.apple.compilers.llvm.clang.1_0</string>
+	<key>DTSDKBuild</key>
+	<string>25F70</string>
+	<key>DTSDKName</key>
+	<string>macosx26.5</string>
+	<key>DTXcode</key>
+	<string>2650</string>
+	<key>DTXcodeBuild</key>
+	<string>17F42</string>
+	<key>LSEnvironment</key>
+	<dict>
+		<key>MallocNanoZone</key>
+		<string>0</string>
+	</dict>
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSAppleScriptEnabled</key>
+	<true/>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>
