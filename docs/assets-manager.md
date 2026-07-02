@@ -184,11 +184,10 @@ changé. Détail complet : `docs/system-allocator.md`.
 
 ## Loader unifié — `src/render/assets/`
 
-Fait, suite à une discussion NotebookLM sur l'unification du chargement d'assets. Vit dans le
-**render worker** (`src/render/assets/`), pas dans `src/core/` — c'est le seul endroit avec accès
-au contexte WebGL/`Scene` Babylon, et `AssetsManager` doit rester agnostique du moteur de rendu.
-Consomme les Blobs mis en cache par `AssetsManager`/le Service Worker pour les transformer en
-objets GPU (`Mesh` Babylon, `Texture`, `AudioBuffer`, `FontFace`).
+Vit dans le **render worker** (`src/render/assets/`), pas dans `src/core/` — c'est le seul endroit
+avec accès au contexte WebGL/`Scene` Babylon, et `AssetsManager` doit rester agnostique du moteur de
+rendu. Consomme les Blobs mis en cache par `AssetsManager`/le Service Worker pour les transformer en
+objets GPU (`Mesh` Babylon, `Texture`, `AudioBuffer`, `FontFace`) ou en pistes d'animation.
 
 Hiérarchie de responsabilités (`src/core/` = infra headless, `src/render/` = atelier de
 transformation avec accès GPU, `src/app/` = shell/plateforme, seul endroit autorisé à toucher
@@ -197,15 +196,19 @@ DOM/Service Worker/WebRTC) :
 ```
 src/render/assets/
 ├── types.ts                    — IResourceLoader<T> + LoaderContext
-├── registry.ts                 — registerLoader(extensions, loader), getLoader, defaultResolve
-├── loadAsset.ts                — façade publique + dédoublonnage centralisé (Map<path, Promise>)
-├── registerDefaultLoaders.ts   — importe les 4 loaders ci-dessous pour effet de bord
+├── registry.ts                 — registerLoader(extensions, type, loader), getLoaderEntry, defaultResolve
+├── loadAsset.ts                — façade publique + résolution de chemin auto + dédoublonnage
+├── registerDefaultLoaders.ts   — importe les loaders ci-dessous pour effet de bord
 └── loaders/
-    ├── MeshLoader.ts    (.glb, .gltf  — @babylonjs/loaders/glTF)
-    ├── TextureLoader.ts (.png, .jpg, .jpeg, .webp — Texture Babylon)
-    ├── AudioLoader.ts   (.mp3, .ogg, .wav — decodeAudioData)
-    └── FontLoader.ts    (.otf, .ttf, .woff, .woff2 — FontFace)
+    ├── MeshLoader.ts      (.glb, .gltf → 'models'  — @babylonjs/loaders/glTF)
+    ├── TextureLoader.ts   (.png, .jpg, .jpeg, .webp → 'texture' — Texture Babylon)
+    ├── AudioLoader.ts     (.mp3, .ogg, .wav → 'audio' — decodeAudioData)
+    ├── FontLoader.ts      (.otf, .ttf, .woff, .woff2 → 'font' — FontFace)
+    └── AnimationLoader.ts (.anim → 'anim' — binaire multi-pistes, voir docs/animation-pipeline.md)
 ```
+
+`src/_dev/assets/JsonAnimationLoader.ts` (DEV only, `.json` → `'anim'`) suit exactement le même
+contrat mais vit hors de `src/render/assets/` — voir `docs/animation-pipeline.md`.
 
 ### `IResourceLoader<T>` — le contrat
 
@@ -227,52 +230,78 @@ interface IResourceLoader<T> {
 
 ### `registry.ts` — registre ouvert, pas une table figée
 
-`registerLoader(extensions, loader)` alimente une `Map` mutable. Chaque loader s'auto-enregistre à
-l'import (`registerLoader(['glb', 'gltf'], meshLoader)` en bas de `MeshLoader.ts`). Conséquence :
-ajouter un futur format (lib audio spécifique, particules, shader, n'importe quoi d'imprévu
-aujourd'hui) ne demande jamais de modifier `registry.ts` ni `loadAsset.ts` — on écrit le nouveau
-fichier dans `loaders/`, il s'enregistre tout seul.
+`registerLoader(extensions, type, loader)` alimente une `Map<extension, {loader, type}>`. `type` est
+le nom du dossier sous `public/<namespace>/` (`'font'`, `'models'`, `'anim'`, ...) — c'est ce qui
+permet à `loadAsset()` de reconstruire le chemin complet à partir d'un simple nom de fichier (voir
+plus bas). Chaque loader s'auto-enregistre à l'import
+(`registerLoader(['glb', 'gltf'], 'models', meshLoader)` en bas de `MeshLoader.ts`). Conséquence :
+ajouter un futur format ne demande jamais de modifier `registry.ts` ni `loadAsset.ts` — on écrit le
+nouveau fichier dans `loaders/`, il s'enregistre tout seul.
 
-### `loadAsset.ts` — façade + dédoublonnage
+### `loadAsset.ts` — façade, résolution de chemin, dédoublonnage
 
 ```ts
-loadAsset<T>(path, ctx?): Promise<T>          // générique, dispatch par extension
-loadMesh(path, scene): Promise<{ meshes }>
-loadTexture(path, scene): Promise<Texture>
-loadFont(path): Promise<FontFace>
-loadAudio(path): Promise<AudioBuffer>
-loadAssets(paths, scene?): Promise<{...}>     // batch, Promise.all — parallèle, pas séquentiel
+loadAsset<T>(filename, ctx?, namespace = 'game'): Promise<T>   // générique, dispatch par extension
+loadMesh(filename, scene): Promise<{ meshes }>
+loadTexture(filename, scene): Promise<Texture>
+loadFont(filename): Promise<FontFace>
+loadAudio(filename): Promise<AudioBuffer>
+loadAnimation(filename): Promise<AnimationTrackSet>
+loadAssets(filenames, scene?): Promise<{...}>     // batch, Promise.all — parallèle, pas séquentiel
 ```
 
-- **Normalisation** : tout `path` est mis en minuscules avant de servir de clé de cache et avant le
-  fetch — évite qu'une casse différente (`Boid.glb` vs `boid.glb`) fasse rater le dédoublonnage.
+**Changement de signature (depuis le pipeline d'animation)** : ces fonctions prennent un **nom de
+fichier nu** (`loadFont('fezbox.otf')`), pas un chemin déjà construit. `loadAsset()` détecte
+l'extension, retrouve le loader et son `type` associé dans le registre, et reconstruit le chemin
+complet via `assetPath(namespace, type, filename)` — plus aucun site d'appel ne construit de chemin à
+la main. `namespace` vaut `'game'` par défaut (le seul utilisé pour l'instant par le render worker).
+
+- **Normalisation** : le chemin résolu est mis en minuscules avant de servir de clé de cache et avant
+  le fetch — évite qu'une casse différente (`Boid.glb` vs `boid.glb`) fasse rater le dédoublonnage.
 - **Dédoublonnage** : `Map<path, Promise>` à l'échelle du module (même idiome que
   `manifestPromise ??= ...` dans `AssetsManager.ts`, étendu en `Map` car clé variable). Deux appels
-  concurrents sur le même `path` reçoivent la même Promise — pas de re-fetch/re-parse en double, pas
-  de race condition. Résolu = caché pour toujours ; rejeté = retiré du cache (pas de poison
-  permanent sur un échec transitoire).
+  concurrents sur le même chemin résolu reçoivent la même Promise — pas de re-fetch/re-parse en
+  double, pas de race condition. Résolu = caché pour toujours ; rejeté = retiré du cache (pas de
+  poison permanent sur un échec transitoire).
 - **Logs `console.debug`** `[loadAsset] cache hit/miss: <path>` à chaque appel, pour vérifier en dev
   que le dédoublonnage fonctionne.
+- **Piège d'extension à deux segments** : `extensionOf()` prend tout après le **dernier** point —
+  `'title-screen.anim.json'` donne `'json'`, pas `'anim.json'`. `'anim'` dans le nom de fichier n'est
+  qu'un infixe sémantique, pas ce qui route vers le loader. Conséquence : le loader JSON d'animation
+  réserve `'json'` en entier — inoffensif tant qu'aucun autre type d'asset JSON n'existe, à revoir le
+  jour où un apparaît (niveau, i18n...).
 
 ### Intégration
 
-`src/render/scene/sceneSetup.ts` appelle `loadMesh('game/models/shiny_fish.glb', scene)` et fait
-tourner le mesh résultant sur `Y`, en remplacement du cube de validation (conservé en commentaire).
+`src/render/scene/sceneSetup.ts` appelle `loadMesh('shiny_fish.glb', scene)` et fait tourner le mesh
+résultant sur `Y`, en remplacement du cube de validation (conservé en commentaire).
 `RenderManager._setupScene()` attend désormais la Promise de `sceneSetup()` (devenue `async`).
-`src/render/render.worker.ts` importe `registerDefaultLoaders` une fois au démarrage.
+`src/render/render.worker.ts` importe `registerDefaultLoaders` une fois au démarrage, et attend son
+export `devLoadersReady` (voir piège ci-dessous) avant d'initialiser le reste.
 
 Pas de nouvel accessor sur `RenderManager` — `Scene` est passé en paramètre explicite depuis
 l'appelant (`sceneSetup.ts` le reçoit déjà), pas récupéré depuis les champs privés du manager.
 
+### Piège résolu — top-level `await` dans un module Worker
+
+`registerDefaultLoaders.ts` important dynamiquement le loader JSON dev-only via un bare
+`if (import.meta.env.DEV) { await import(...) }` **au niveau module** faisait planter le démarrage
+du render worker en silence (aucune erreur console, aucun log `BJS`, page bloquée). Corrigé en
+exportant une Promise (`devLoadersReady`) plutôt que d'utiliser un top-level await — `render.worker.ts`
+l'attend explicitement dans `api.init()` avant d'appeler `manager.init(...)`.
+
 ## Reste à faire (prochaines sessions)
 
-- Renommer `public/game/models/` → `public/game/model/` (singulier, cohérence de convention).
+- Renommer `public/game/models/` → `public/game/mesh/` (cohérence avec `MeshLoader.ts`) — proposé,
+  pas encore tranché.
 - `FontLoader` renvoie une `FontFace` chargée mais ne l'enregistre pas (`document.fonts.add()`
   n'existe pas dans un worker OffscreenCanvas) — l'enregistrement effectif reste à câbler côté main
-  thread.
+  thread (fait ponctuellement par `TitleMenuPanel.create()` pour fezbox, pas généralisé).
 - Variante Pixi de `TextureLoader` (`Texture.from`) le jour où un premier asset UI image apparaît.
 - Résoudre la question de rigidité worker (AssetsManager en worker dédié ou inline) avant d'ajouter
   d'autres workers dédiés.
 - Séquencer `warmUp('app', ...)` puis `warmUp('game', ...)` depuis `AppOrchestrator` une fois qu'un
   écran de chargement existe (paramètre déjà supporté par `warmUp()`, pas encore branché).
 - Workbox pour l'app shell (JS/CSS du bundle) — explicitement hors scope jusqu'ici.
+- Extension `'json'` réservée entièrement au loader d'animation — revoir si un second type d'asset
+  JSON apparaît (voir piège d'extension ci-dessus).
