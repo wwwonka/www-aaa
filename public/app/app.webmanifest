@@ -1,14 +1,20 @@
 {
-  "id": "/",
-  "name": "Game Architecture",
-  "short_name": "Architecture",
+  "id": "www-aaa",
+  "name": "www-aaa",
+  "short_name": "www-aaa",
   "description": "Wireless game controller over WebRTC — use your phone as a dual-joystick gamepad for any screen.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",
-  "display_override": ["fullscreen", "window-controls-overlay", "standalone", "minimal-ui", "browser"],
+  "display_override": [
+    "fullscreen", 
+    "window-controls-overlay", 
+    "standalone", 
+    "minimal-ui", 
+    "browser"
+  ],
   "orientation": "landscape",
   "background_color": "#000000",
   "theme_color": "#000000",
@@ -17,6 +23,16 @@
     "client_mode": "focus-existing"
   },
   "handle_links": "preferred",
+  "protocol_handlers": [
+      {
+        "protocol": "web+www",
+        "url": "/www?type=%s"
+      },
+      {
+        "protocol": "web+aaa",
+        "url": "/aaa?type=%s"
+      }
+  ],
   "icons": [
     {
       "src": "icons/icon.svg",
@@ -31,21 +47,36 @@
       "purpose": "maskable"
     }
   ],
-  "screenshots": [],
+  "screenshots": [
+    {
+      "src": "screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Receiver view on desktop"
+    },
+    {
+      "src": "screenshots/mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Controller on phone"
+    }
+  ],
   "shortcuts": [
     {
       "name": "Controller",
       "short_name": "Controller",
       "description": "Open as gamepad controller",
       "url": "/?role=controller",
-      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
     },
     {
       "name": "Receiver",
       "short_name": "Receiver",
       "description": "Open as game receiver / TV screen",
       "url": "/?role=receiver",
-      "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ],
   "prefer_related_applications": false,
