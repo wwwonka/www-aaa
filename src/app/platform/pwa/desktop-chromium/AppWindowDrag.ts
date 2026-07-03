@@ -14,6 +14,8 @@
 // Retourne un `dispose()` (et non l'inverse) pour un tear-down propre, en symétrie avec les
 // autres handlers d'événements du shell.
 
+import { acquireGesture, releaseGesture } from './windowGestureLock'
+
 const DRAG_THRESHOLD_PX = 4
 
 interface DragState {
@@ -33,6 +35,9 @@ export function setupWindowDrag(): () => void {
   const onPointerDown = (e: PointerEvent) => {
     // Pas de drag au clic droit ni en plein écran (rien à déplacer).
     if (e.button !== 0 || document.fullscreenElement) return
+    // Un pinch trackpad en cours tient le verrou — on n'ouvre pas un drag qui se battrait
+    // avec lui pour la position de la fenêtre.
+    if (!acquireGesture('drag')) return
     drag = {
       pointerId:    e.pointerId,
       target:       e.target as DragState['target'],
@@ -59,6 +64,7 @@ export function setupWindowDrag(): () => void {
     if (!drag || e.pointerId !== drag.pointerId) return
     if (drag.moved) drag.target.releasePointerCapture?.(drag.pointerId)
     drag = null
+    releaseGesture('drag')
   }
 
   // Annule exactement le `click` qui suivrait le drag qu'on vient de terminer, puis se
@@ -82,5 +88,6 @@ export function setupWindowDrag(): () => void {
     document.removeEventListener('pointerup', endDrag, { capture: true })
     document.removeEventListener('pointercancel', endDrag, { capture: true })
     document.removeEventListener('click', onClick, { capture: true })
+    if (drag) releaseGesture('drag')
   }
 }
