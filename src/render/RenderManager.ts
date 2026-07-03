@@ -28,6 +28,8 @@ export class RenderManager {
   private _targetFps!:      number
   private _stopLoop!:       () => void
   private _lastTime:        number = 0
+  private _overGameUI:      boolean = false
+  private _notifyOverGameUI?: (over: boolean) => void
 
   /**
    * @param canvas - The `OffscreenCanvas` transferred from the main thread; Babylon and Pixi share
@@ -95,6 +97,30 @@ export class RenderManager {
     this._screenManager.register('PAUSED',       new PauseScreen(fn, this._width, this._height))
     this._screenManager.register('TITLE_SCREEN', await TitleScreen.create(this._width, this._height))
     this._screenManager.register('IN_GAME',      new InGameScreen(this._width, this._height))
+  }
+
+  /**
+   * Miroite vers le main thread le fait que le curseur survole un contrôle Pixi interactif.
+   * Le main thread ne peut pas hit-tester la scène (elle vit ici), et son handler `dblclick`
+   * doit décider synchroniquement s'il déclenche le plein écran — voir
+   * `app/platform/pwa/AppWindowFullscreen.ts`.
+   *
+   * On écoute `pointerover`/`pointerout` sur `stage` : ils bubblent depuis le contrôle
+   * interactif touché (`UIComponent` pose `eventMode='static'`), les zones non interactives ne
+   * sont jamais cibles de survol. Passer d'un bouton au fond émet donc bien un `pointerout`.
+   *
+   * @param fn - Callback (proxifié Comlink) invoqué à chaque changement d'état de survol.
+   */
+  async setOverGameUI(fn: (over: boolean) => void): Promise<void> {
+    this._notifyOverGameUI = fn
+    this._ui.stage.on('pointerover', () => this._setOverGameUI(true))
+    this._ui.stage.on('pointerout',  () => this._setOverGameUI(false))
+  }
+
+  private _setOverGameUI(over: boolean): void {
+    if (over === this._overGameUI) return
+    this._overGameUI = over
+    this._notifyOverGameUI?.(over)
   }
 
   /** @param state - The `AppState` to display; also drives the pause-blur transition. */

@@ -4,6 +4,7 @@ import { mountEventHandlers }             from './events/_index'
 import { installBrowserGuards }           from './guards/_index'
 import { detectAppContext }               from './platform/ContextManager'
 import { registerServiceWorker }          from './platform/serviceWorkerRegister'
+import { setupPwaExperience }             from './platform/pwa/_index'
 import { appOrchestrator }                from '../core/AppOrchestrator'
 import { createAssetsManager }            from '../core/AssetsManager'
 import type { AssetsManagerApi }          from '../core/AssetsManager'
@@ -64,6 +65,11 @@ export class AppHost {
 
     await renderApi.setSendToAsm(Comlink.proxy((event) => appOrchestrator.send(event as any)))
 
+    // Miroir du survol UI poussé par le render worker — lu synchroniquement par le handler
+    // dblclick→plein écran des PWA desktop (voir platform/pwa/AppWindowFullscreen.ts).
+    let overGameUI = false
+    await renderApi.setOverGameUI(Comlink.proxy((over: boolean) => { overGameUI = over }))
+
     // xstate émet un nouveau snapshot à chaque `.send()`, y compris les events ASSET_PROGRESS du
     // warmUp() parallélisé (un par asset) — sans déduplication, showScreen() (et donc
     // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
@@ -77,6 +83,7 @@ export class AppHost {
     appOrchestrator.startUp()
 
     mountEventHandlers({ canvas, renderWorker })
+    setupPwaExperience(ctx.runtime, () => overGameUI)
 
     return { assetsManager, renderApi }
   }

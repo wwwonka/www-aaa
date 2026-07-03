@@ -18,6 +18,10 @@ const api = {
     await manager.setSendToAsm(fn)
   },
 
+  async setOverGameUI(fn: (over: boolean) => void): Promise<void> {
+    await manager.setOverGameUI(fn)
+  },
+
   setFps(fps: number): void {
     manager.setFps(fps)
   },
