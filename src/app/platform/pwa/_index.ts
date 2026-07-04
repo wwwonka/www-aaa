@@ -2,6 +2,7 @@ import type { RuntimeCategory } from '../runtimeDetect'
 import { setupDblclickFullscreen } from './AppWindowFullscreen'
 import { setupWindowDrag }         from './desktop-chromium/AppWindowDrag'
 import { setupWindowPinch }        from './desktop-chromium/AppWindowPinch'
+import { setupPreventPageZoom }    from './desktop-chromium/preventPageZoom'
 
 /**
  * Câble les comportements « chrome de fenêtre » selon le runtime détecté :
@@ -24,6 +25,7 @@ export function setupPwaExperience(runtime: RuntimeCategory, isOverGameUI: () =>
 
   if (isDesktopPwa) setupDblclickFullscreen(isOverGameUI)
   if (runtime === 'pwa-desktop-chromium') {
+    setupPreventPageZoom()
     setupWindowDrag()
     setupWindowPinch()
   }

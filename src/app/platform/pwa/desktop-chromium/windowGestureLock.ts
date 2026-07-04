@@ -13,14 +13,27 @@ type GestureName = 'drag' | 'pinch'
 
 let held: GestureName | null = null
 
-/** Tente de prendre le verrou ; renvoie `false` si un autre geste le tient déjà. */
+/**
+ * Tente de prendre le verrou ; renvoie `false` s'il est déjà tenu par un autre geste.
+ *
+ * Exception : le `'drag'` PRÉEMPTE le `'pinch'`. Un `pointerdown` est un geste explicite et le
+ * pinch trackpad n'émet jamais de `pointerdown`, donc si un drag démarre pendant la « queue » du
+ * pinch (le verrou reste tenu ~180 ms après le dernier wheel), il vole le verrou plutôt que
+ * d'échouer — sinon un drag juste après un pinch ne partirait pas. Le pinch détecte la
+ * préemption via `heldGesture()` et s'abandonne (voir `AppWindowPinch`).
+ */
 export function acquireGesture(name: GestureName): boolean {
-  if (held !== null) return false
-  held = name
-  return true
+  if (held === null || held === name) { held = name; return true }
+  if (name === 'drag' && held === 'pinch') { held = 'drag'; return true }
+  return false
 }
 
 /** Relâche le verrou si (et seulement si) c'est bien ce geste qui le tenait. */
 export function releaseGesture(name: GestureName): void {
   if (held === name) held = null
+}
+
+/** Geste qui tient actuellement le verrou (ou `null`). Sert au pinch à détecter une préemption. */
+export function heldGesture(): GestureName | null {
+  return held
 }

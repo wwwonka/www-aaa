@@ -21,7 +21,7 @@
 // contre le throttle et saccadent AU LIEU de lisser. Un resize direct par event est plus
 // réactif ici. Le vrai levier de fluidité restant est le gating du resize worker (churn GPU) —
 // séparé, non implémenté pour l'instant.
-import { acquireGesture, releaseGesture } from './windowGestureLock'
+import { acquireGesture, releaseGesture, heldGesture } from './windowGestureLock'
 
 // Un « clic » de log-échelle par unité de delta. Réglé pour un pinch trackpad doux.
 // - Plus grand (ex. 0.02) → grossit/rétrécit plus vite ; plus « nerveux », plus dur à doser.
@@ -41,6 +41,9 @@ const END_TIMEOUT_MS = 180
 // pendant un resize async, elle apprenait un faux plancher gonflé et empêchait de resize petit).
 const FLOOR_MIN_W = 500
 const FLOOR_MIN_H = 362
+// Nb de frames consécutives « axe bloqué » avant d'entériner un plancher réel — filtre les
+// faux positifs de settling (voir `stuckW`/`stuckH` dans `apply`).
+const FLOOR_CONFIRM_FRAMES = 3
 
 interface PinchState {
   x0:       number
@@ -60,15 +63,77 @@ export function setupWindowPinch(): () => void {
   let lastH = 0
   let lastX = 0
   let lastY = 0
+  // Plancher réel APPRIS pendant le geste (échelle mini), quand Chromium refuse de rétrécir un
+  // axe. Nos constantes `FLOOR_MIN_*` sont une borne basse de secours mais peuvent être SOUS le
+  // vrai minimum machine/DPR ; sans ça, on demanderait un axe sous son plancher réel → Chromium
+  // le clampe pendant que l'autre axe continue → scale mono-axe. Monotone (ne fait que monter),
+  // remis à 0 à chaque nouveau geste. `prevOuter*` sert à distinguer un vrai plancher (taille
+  // réelle stable) d'un simple retard de resize (taille réelle qui décroît frame après frame).
+  let floorScale = 0
+  let prevOuterW = 0
+  let prevOuterH = 0
+  // Nb de frames consécutives où un axe semble bloqué (réel > demandé, stable). On n'entérine un
+  // plancher qu'après `FLOOR_CONFIRM_FRAMES` pour NE PAS confondre un vrai plancher (bloqué
+  // indéfiniment) avec un reliquat de settling au renversement pinch-out→pinch-in (qui, lui, se
+  // résorbe en 1-2 frames quand outerWidth redescend). Sinon on verrouillait un faux plancher à
+  // la grande taille du pinch-out → impossible de rétrécir ensuite.
+  let stuckW = 0
+  let stuckH = 0
+  // Vrai quand la fenêtre est à sa dimension minimale (échelle collée au plancher). Dans cet état
+  // on IGNORE tout pinch-in supplémentaire (pas d'accumulation) — réactivé dès le premier pinch-out.
+  let atFloor = false
 
   const apply = () => {
     rafId = 0
     if (!pinch) return
+    // Un drag a préempté notre verrou (voir windowGestureLock) → on abandonne, il pilote la
+    // position maintenant. Sans ça, drag et pinch écriraient tous deux la géométrie.
+    if (heldGesture() !== 'pinch') { pinch = null; return }
 
-    // Clampe l'échelle au plancher Chromium (ratio préservé) : on ne demande jamais une taille
-    // que Chromium clamperait, ce qui garderait `moveTo` et `resizeTo` désynchronisés.
-    const sMin = Math.max(FLOOR_MIN_W / pinch.w0, FLOOR_MIN_H / pinch.h0)
-    const s = Math.max(sMin, Math.exp(pinch.logScale))
+    // Auto-détection du vrai plancher. Un axe est candidat quand la fenêtre RÉELLE est plus grande
+    // que ce qu'on a demandé (`lastW/lastH` → Chromium a refusé de rétrécir) ET que la taille
+    // réelle est stable (`prevOuter*`). Mais on n'entérine qu'après plusieurs frames consécutives
+    // (`FLOOR_CONFIRM_FRAMES`) : un reliquat de settling au renversement pinch-out→pinch-in remplit
+    // la condition 1 frame puis se résorbe (outerWidth redescend), tandis qu'un vrai plancher reste
+    // bloqué. Une fois confirmé, `floorScale` (monotone) bloque les DEUX axes au prochain `sMin`
+    // (aspect préservé). Lecture UNIQUEMENT pour le plancher — pas de boucle de rétroaction.
+    const TOL = 2
+    const aw = window.outerWidth
+    const ah = window.outerHeight
+    stuckW = (aw > lastW + TOL && Math.abs(aw - prevOuterW) <= TOL) ? stuckW + 1 : 0
+    stuckH = (ah > lastH + TOL && Math.abs(ah - prevOuterH) <= TOL) ? stuckH + 1 : 0
+    if (stuckW >= FLOOR_CONFIRM_FRAMES) floorScale = Math.max(floorScale, aw / pinch.w0)
+    if (stuckH >= FLOOR_CONFIRM_FRAMES) floorScale = Math.max(floorScale, ah / pinch.h0)
+    prevOuterW = aw; prevOuterH = ah
+
+    // Centre de la fenêtre au début du geste — invariant : on le garde fixe pendant tout le pinch.
+    const cx = pinch.x0 + pinch.w0 / 2
+    const cy = pinch.y0 + pinch.h0 / 2
+
+    // Zone d'écran disponible (CSS px). availLeft/availTop sont non-standard (absents du type
+    // `Screen`) mais fournis par Chromium en multi-écran ; défaut 0.
+    const scr = window.screen as Screen & { availLeft?: number; availTop?: number }
+    const availLeft = scr.availLeft ?? 0
+    const availTop  = scr.availTop  ?? 0
+
+    // Bornes d'échelle, ratio préservé (w et h partent du même s) :
+    // - sMin : plancher Chromium — en-dessous `resizeTo` est clampé et `moveTo`/`resizeTo` se
+    //   désynchronisent (dérive).
+    // - sMax : la fenêtre doit rester ENTIÈREMENT à l'écran avec le centre fixe — sinon, au bord,
+    //   un axe est clampé par l'OS pendant que l'autre grandit → l'aspect se casse. On clampe donc
+    //   les DEUX axes ensemble à ce qui tient à l'écran.
+    const maxW = 2 * Math.min(cx - availLeft, availLeft + scr.availWidth  - cx)
+    const maxH = 2 * Math.min(cy - availTop,  availTop  + scr.availHeight - cy)
+    const sMin = Math.max(FLOOR_MIN_W / pinch.w0, FLOOR_MIN_H / pinch.h0, floorScale)
+    const sMax = Math.max(sMin, Math.min(maxW / pinch.w0, maxH / pinch.h0))
+
+    // Clampe l'ACCUMULATEUR lui-même dans la plage valide (pas seulement `s`) → pas
+    // d'accumulation hors-plage qui créerait une dead-zone au relâchement ou un drift.
+    const logMin = Math.log(sMin)
+    pinch.logScale = Math.min(Math.max(pinch.logScale, logMin), Math.log(sMax))
+    // Collé au plancher → on bloquera tout pinch-in supplémentaire dans `onWheel`.
+    atFloor = pinch.logScale <= logMin + 1e-6
+    const s = Math.exp(pinch.logScale)
     const w = Math.round(pinch.w0 * s)
     const h = Math.round(pinch.h0 * s)
 
@@ -90,6 +155,10 @@ export function setupWindowPinch(): () => void {
     if (!e.ctrlKey || document.fullscreenElement) return
     e.preventDefault()
 
+    // Si un drag a préempté le verrou pendant la queue du geste, on repart d'un état pinch neuf
+    // (qui devra re-tenter d'acquérir le verrou ci-dessous).
+    if (pinch && heldGesture() !== 'pinch') pinch = null
+
     if (!pinch) {
       // Un drag clic-maintenu en cours tient le verrou — on n'ouvre pas de pinch qui se
       // battrait avec lui pour la position de la fenêtre.
@@ -102,11 +171,22 @@ export function setupWindowPinch(): () => void {
         logScale: 0,
       }
       lastW = pinch.w0; lastH = pinch.h0; lastX = pinch.x0; lastY = pinch.y0
+      // Plancher ré-appris à chaque geste (la géométrie de départ change) ; `prevOuter*` amorcés
+      // à la taille de départ pour ne pas fausser la détection de plateau à la 1re frame.
+      floorScale = 0
+      stuckW = 0
+      stuckH = 0
+      atFloor = false
+      prevOuterW = pinch.w0
+      prevOuterH = pinch.h0
     }
 
-    // Accumulation en log-space : zoom-in et zoom-out sont symétriques.
+    // Accumulation en log-space : zoom-in et zoom-out sont symétriques. `delta > 0` = pinch-in
+    // (rétrécit). À la dimension minimale, on IGNORE tout pinch-in supplémentaire (sinon on
+    // accumulerait une réserve à « défaire » avant que le pinch-out ne reparte) ; un pinch-out
+    // (`delta < 0`) passe toujours et réactive le scale.
     const delta = Math.max(-DELTA_CLAMP, Math.min(DELTA_CLAMP, e.deltaY))
-    pinch.logScale -= delta * SCALE_SENSITIVITY
+    if (!(atFloor && delta > 0)) pinch.logScale -= delta * SCALE_SENSITIVITY
 
     // Un seul resize par frame, quel que soit le nombre d'events reçus.
     if (!rafId) rafId = requestAnimationFrame(apply)
