@@ -1,5 +1,14 @@
 # Brief — Démo jouable pour Fable
 
+> **État d'avancement (2026-07-05)** : Étape 0 terminée et commitée (`22be292` sur
+> `feature/title-screen-theatre`) — ESLint 10 flat config (`eslint.config.ts`, jiti) +
+> Prettier + vite-plugin-checker (lint/tsc en worker thread, overlay dev), conventions
+> encodées en règles (naming `_` privés, pas de préfixe `I`, `no-explicit-any`,
+> `src/shared/` sans imports UI/rendu), code existant mis en conformité, passe de
+> formatage globale, et `"strict": true` activé dans `tsconfig.json` (0 erreur).
+> **Prochaine étape : Étape 1 — Routing & rôles** (section 11). Le playbook CLAUDE.md §15
+> s'applique : critique d'architecture + validation utilisateur AVANT d'implémenter.
+
 ## 0. Contexte et lecture préalable
 
 Ce projet est une console web type Nintendo Switch : un `receiver` (desktop) affiche le
@@ -244,7 +253,7 @@ Après chaque étape : un message de résumé (ce qui a été fait, risques rest
 reste à faire) puis **attendre un go explicite de l'utilisateur** avant de continuer —
 conforme au playbook CLAUDE.md §15.
 
-**Étape 0 — Outillage qualité** (préalable, avant tout code fonctionnel)
+**Étape 0 — Outillage qualité** ✅ FAIT (commit `22be292` + `strict: true` non commité)
 
 - Configurer ESLint + Prettier alignés sur les conventions de la section 3 (actuellement
   absents du repo).
