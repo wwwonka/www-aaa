@@ -5,11 +5,16 @@ import type { SnapshotFrom } from 'xstate';
 // Types
 // ---------------------------------------------------------------------------
 
-/** `PLAYING_ON_PHONE` — le jeu continue de tourner mais le rendu est transféré à un contrôleur mobile (voir event `TRANSFER`). */
-export type AppState = 'TITLE_SCREEN' | 'IN_GAME' | 'PAUSED' | 'PLAYING_ON_PHONE';
+/**
+ * `PLAYING_ON_PHONE` — le jeu continue de tourner mais le rendu est transféré à un contrôleur mobile (voir event `TRANSFER`).
+ * `PAIRING_MODE` — overlay de pairing affiché par-dessus l'écran courant (le screen sous-jacent reste visible, voir `ScreenManager`).
+ */
+export type AppState = 'TITLE_SCREEN' | 'PAIRING_MODE' | 'IN_GAME' | 'PAUSED' | 'PLAYING_ON_PHONE';
 
 export type AppEvent =
   | { type: 'PLAY' }
+  | { type: 'OPEN_PAIRING' }
+  | { type: 'CLOSE_PAIRING' }
   | { type: 'PAUSE' }
   | { type: 'RESUME' }
   | { type: 'QUIT' }
@@ -49,6 +54,16 @@ const appMachine = createMachine(
             target: 'IN_GAME',
             guard: 'hasController',
           },
+          OPEN_PAIRING: 'PAIRING_MODE',
+        },
+      },
+
+      // Overlay par-dessus TITLE_SCREEN (le screen sous-jacent reste visible — voir
+      // ScreenManager). Accessible plus tard depuis PAUSED : le retour multi-états sera géré à
+      // ce moment-là (historique xstate ou state parent), pas construit maintenant.
+      PAIRING_MODE: {
+        on: {
+          CLOSE_PAIRING: 'TITLE_SCREEN',
         },
       },
 

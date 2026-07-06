@@ -38,7 +38,7 @@ export async function toggleAuthoringMode(renderApi: RenderWorkerApi): Promise<v
 }
 
 /** DEV-only entry point — call once from `main.ts` behind `import.meta.env.DEV`. Wires the 'T'/Cmd+S shortcuts; never imports `@theatre/studio` itself (see {@link toggleAuthoringMode}). */
-export function initDev(deps: {
+export function initDevMode(deps: {
   assetsManager: AssetsManagerApi;
   renderApi: RenderWorkerApi;
 }): void {

@@ -78,6 +78,17 @@ export function dispatchPointerEvent(
   } else if (DOCUMENT_EVENTS.has(type)) {
     (globalThis as unknown as { document: EventTarget }).document.dispatchEvent(evt);
   } else {
+    // pointerup/mouseup partent sur `globalThis` (là où EventSystem écoute), mais `dispatchEvent`
+    // pose alors `event.target = self` — et `EventSystem._onPointerUp` lit `composedPath()[0]`
+    // (puis `target`) et le compare à son `domElement` pour distinguer un relâchement sur le
+    // canvas d'un relâchement "outside" (→ `pointerupoutside`, qui ne produit jamais de
+    // `pointertap`/click). On shadow les deux sur l'instance pour que le up soit vu sur le
+    // canvas, comme dans un vrai navigateur.
+    Object.defineProperty(evt, 'target', { value: canvas, configurable: true });
+    Object.defineProperty(evt, 'composedPath', {
+      value: () => [canvas],
+      configurable: true,
+    });
     self.dispatchEvent(evt);
   }
 }

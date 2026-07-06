@@ -17,6 +17,7 @@ interface ScreenEntry {
 export class ScreenManager {
   private readonly _map: Map<AppState, ScreenEntry> = new Map();
   private _current: AppState | null = null;
+  private _overlay: AppState | null = null;
 
   private readonly _gameUI: Container;
   private readonly _overlayUI: Container;
@@ -43,13 +44,32 @@ export class ScreenManager {
    * Transition to a new state: fade out the current screen, fade in the next.
    * Side-effects (blur, etc.) should be handled by the caller before invoking this.
    *
+   * Overlay screens (`UIScreen.isOverlay`) layer on top of the current base screen: entering one
+   * leaves the base screen visible (no `onLeave`), and returning to that same base state only
+   * dismisses the overlay (no redundant `onEnter` on a screen that never left).
+   *
    * @param to - The `AppState` to transition to.
    */
   transition(to: AppState): void {
+    const target = this._map.get(to);
+
+    if (target?.screen.isOverlay) {
+      if (this._overlay !== null) this._map.get(this._overlay)?.screen.onLeave();
+      this._overlay = to;
+      target.screen.onEnter();
+      return;
+    }
+
+    if (this._overlay !== null) {
+      this._map.get(this._overlay)?.screen.onLeave();
+      this._overlay = null;
+      if (to === this._current) return;
+    }
+
     if (this._current !== null) {
       this._map.get(this._current)?.screen.onLeave();
     }
-    this._map.get(to)?.screen.onEnter();
+    target?.screen.onEnter();
     this._current = to;
   }
 

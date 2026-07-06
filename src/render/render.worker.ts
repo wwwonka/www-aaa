@@ -14,6 +14,16 @@ const api = {
     await manager.init(canvas, targetFps);
   },
 
+  /** Rôle + URL de la page, fournis par le main avant `setSendToAsm` — voir `RenderManager.setShellContext`. */
+  setShellContext(ctx: { role: 'controller' | 'receiver'; pageUrl: string }): void {
+    manager.setShellContext(ctx);
+  },
+
+  /** Bascule searching ⇄ paired de l'overlay de pairing (`null` = retour à searching). */
+  setControllerPaired(peerName: string | null): void {
+    manager.setControllerPaired(peerName);
+  },
+
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
     await manager.setSendToAsm(fn);
   },

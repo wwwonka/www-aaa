@@ -23,6 +23,12 @@ export abstract class UIScreen {
   /** Which PixiJS layer this screen lives in */
   abstract readonly layer: 'gameUI' | 'overlayUI';
 
+  /**
+   * Overlay screens (e.g. pairing modal) render on top of the current base screen without
+   * fading it out — see `ScreenManager.transition` for the exact semantics.
+   */
+  readonly isOverlay: boolean = false;
+
   protected _width: number;
   protected _height: number;
 

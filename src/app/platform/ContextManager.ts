@@ -42,11 +42,16 @@ export function saveRole(role: 'controller' | 'receiver'): void {
   localStorage.setItem(ROLE_KEY, role);
 }
 
-/** Détecte plateforme, rôle et runtime de l'appareil courant. */
-export function detectAppContext(): AppContext {
+/**
+ * Détecte plateforme, rôle et runtime de l'appareil courant.
+ *
+ * @param forcedRole - Override session-only (`?controller` / `?receiver`) — prioritaire sur la
+ * détection, jamais persisté (localStorage reste réservé au choix manuel via {@link saveRole}).
+ */
+export function detectAppContext(forcedRole?: 'controller' | 'receiver' | null): AppContext {
   const { category: runtime } = detectRuntimeContext();
   const platform = detectPlatform(navigator.userAgent, runtime);
-  const role = roleFromPlatform(platform);
+  const role = forcedRole ?? roleFromPlatform(platform);
 
   return { platform, role, runtime };
 }

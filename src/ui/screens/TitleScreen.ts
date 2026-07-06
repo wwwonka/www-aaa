@@ -15,11 +15,18 @@ export class TitleScreen extends UIScreen {
     this.node.addChild(panel.node);
   }
 
-  /** Awaits `TitleMenuPanel.create()` (loads fezbox) before the screen ever exists — no fallback-font flash. */
-  static async create(width: number, height: number): Promise<TitleScreen> {
-    const panel = await TitleMenuPanel.create(() => {
-      // TODO: embranchement mobile — pour l'instant un simple point d'entrée cliquable.
-    });
+  /**
+   * Awaits `TitleMenuPanel.create()` (loads fezbox) before the screen ever exists — no fallback-font flash.
+   *
+   * @param onConnectController - Click handler du prompt "CONNECT CONTROLLER" — remonte
+   * `OPEN_PAIRING` à l'orchestrateur (voir `RenderManager.setSendToAsm`).
+   */
+  static async create(
+    width: number,
+    height: number,
+    onConnectController: () => void,
+  ): Promise<TitleScreen> {
+    const panel = await TitleMenuPanel.create(onConnectController);
     return new TitleScreen(width, height, panel);
   }
 

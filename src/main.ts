@@ -1,13 +1,16 @@
-if (import.meta.env.DEV && window.location.search.includes('monolith')) {
+import { parseQueryFlags } from './app/platform/queryFlags';
+
+const flags = parseQueryFlags(window.location.search);
+
+if (import.meta.env.DEV && flags.monolith) {
   const { startMonolithMode } = await import('./_dev/inspectors/monolith');
   await startMonolithMode();
 } else {
   const { AppHost } = await import('./app/AppHost');
-  const { assetsManager, renderApi } = await new AppHost().start();
+  const { assetsManager, renderApi } = await new AppHost().start(flags);
 
-  // Load DEV MODE
   if (import.meta.env.DEV) {
-    const { initDev } = await import('./_dev/initDev');
-    initDev({ assetsManager, renderApi });
+    const { initDevMode } = await import('./_dev/initDev');
+    initDevMode({ assetsManager, renderApi });
   }
 }

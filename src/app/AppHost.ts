@@ -11,6 +11,7 @@ import { createAssetsManager } from '../core/AssetsManager';
 import type { AssetsManagerApi } from '../core/AssetsManager';
 import { allocateSystems } from '../core/SystemAllocator';
 import type { SystemHostApi } from '../core/SystemHost.worker';
+import type { QueryFlags } from './platform/queryFlags';
 
 /**
  * Boots the app shell: detects the runtime context, installs browser guards, spins up the
@@ -21,9 +22,13 @@ export class AppHost {
   /**
    * Runs the full startup sequence and returns the live handles the caller needs
    * once the canvas has been handed off to the render worker.
+   *
+   * @param flags - Flags de boot parsés depuis l'URL (rôle forcé session-only, etc.).
    */
-  async start(): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
-    const ctx = detectAppContext();
+  async start(
+    flags?: QueryFlags,
+  ): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
+    const ctx = detectAppContext(flags?.forcedRole);
     installBrowserGuards();
     void registerServiceWorker(ctx.runtime);
 
@@ -72,6 +77,13 @@ export class AppHost {
 
     await renderApi.init(Comlink.transfer(offscreen, [offscreen]));
 
+    // Avant setSendToAsm (qui construit les screens) : le worker ne peut ni détecter le rôle ni
+    // lire l'URL de la page — son `location` pointe sur le script du worker.
+    await renderApi.setShellContext({
+      role: ctx.role === 'controller' ? 'controller' : 'receiver',
+      pageUrl: `${window.location.origin}${window.location.pathname}`,
+    });
+
     await renderApi.setSendToAsm(Comlink.proxy((event: AppEvent) => appOrchestrator.send(event)));
 
     // Miroir du survol UI poussé par le render worker — lu synchroniquement par le handler
@@ -88,12 +100,24 @@ export class AppHost {
     // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
     // vrai changement d'écran.
     let lastScreenState: string | undefined;
+    let lastHasController = false;
     appOrchestrator.subscribe((snapshot) => {
+      // Miroir searching ⇄ paired vers l'overlay de pairing — le nom réel du peer arrivera avec
+      // l'identité Trystero (Étape 2), placeholder générique en attendant.
+      const { hasController } = snapshot.context;
+      if (hasController !== lastHasController) {
+        lastHasController = hasController;
+        void renderApi.setControllerPaired(hasController ? 'controller' : null);
+      }
+
       if (snapshot.value === lastScreenState) return;
       lastScreenState = snapshot.value as string;
       void renderApi.showScreen(snapshot.value as AppState);
     });
     appOrchestrator.startUp();
+
+    // Un device controller boote directement sur l'interface de pairing plein écran.
+    if (ctx.role === 'controller') appOrchestrator.send({ type: 'OPEN_PAIRING' });
 
     mountEventHandlers({ canvas, renderWorker });
     setupPwaExperience(ctx.runtime, () => overGameUI);

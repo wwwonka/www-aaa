@@ -9,6 +9,8 @@ import { ScreenManager } from '../ui/ScreenManager';
 import { PauseScreen } from '../ui/screens/PauseScreen';
 import { TitleScreen } from '../ui/screens/TitleScreen';
 import { InGameScreen } from '../ui/screens/InGameScreen';
+import { PairingOverlayScreen } from '../ui/screens/PairingOverlayScreen';
+import type { PairingRole } from '../ui/panels/PairingPanel';
 import { startRenderLoop } from './renderLoop';
 import type { AppState, AppEvent } from '../core/AppOrchestrator';
 import { applyAnimatedValue } from './animation/AnimationRegistry';
@@ -37,6 +39,13 @@ export class RenderManager {
   private _lastTime: number = 0;
   private _overGameUI: boolean = false;
   private _notifyOverGameUI?: (over: boolean) => void;
+  // Fallback sûr si setShellContext n'est jamais appelé (ex. harnais de test) — `qrcode` jette
+  // sur une chaîne vide.
+  private _shellContext: { role: PairingRole; pageUrl: string } = {
+    role: 'receiver',
+    pageUrl: 'https://localhost/',
+  };
+  private _pairingScreen: PairingOverlayScreen | null = null;
 
   /**
    * @param canvas - The `OffscreenCanvas` transferred from the main thread; Babylon and Pixi share
@@ -98,6 +107,20 @@ export class RenderManager {
     this._screenManager?.replayCurrentReveal();
   }
 
+  /**
+   * Contexte shell fourni par le main thread avant `setSendToAsm` — le worker ne peut ni détecter
+   * le rôle (UA/localStorage vivent côté main) ni lire l'URL de la page (`location` du worker
+   * pointe sur le script).
+   */
+  setShellContext(ctx: { role: PairingRole; pageUrl: string }): void {
+    this._shellContext = ctx;
+  }
+
+  /** Relaye searching ⇄ paired à l'overlay de pairing — appelé par le main sur `CONTROLLER_CONNECTED`/`_DISCONNECTED`. */
+  setControllerPaired(peerName: string | null): void {
+    this._pairingScreen?.setPaired(peerName);
+  }
+
   /** @param fn - Callback invoked whenever a screen (e.g. `PauseScreen`) needs to send an `AppEvent` back to the state machine. */
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
     this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI);
@@ -105,9 +128,20 @@ export class RenderManager {
     this._screenManager.register('PAUSED', new PauseScreen(fn, this._width, this._height));
     this._screenManager.register(
       'TITLE_SCREEN',
-      await TitleScreen.create(this._width, this._height),
+      await TitleScreen.create(this._width, this._height, () => fn({ type: 'OPEN_PAIRING' })),
     );
     this._screenManager.register('IN_GAME', new InGameScreen(this._width, this._height));
+
+    const { role, pageUrl } = this._shellContext;
+    // Placeholder aléatoire tant que l'identité Trystero n'existe pas (Étape 2).
+    const deviceName = `${role} ${10 + Math.floor(Math.random() * 90)}`;
+    this._pairingScreen = await PairingOverlayScreen.create(this._width, this._height, {
+      role,
+      pageUrl,
+      deviceName,
+      onClose: () => fn({ type: 'CLOSE_PAIRING' }),
+    });
+    this._screenManager.register('PAIRING_MODE', this._pairingScreen);
   }
 
   /**
