@@ -37,7 +37,6 @@
     "typescript-eslint": "^8.62.1",
     "vite": "^8.1.2",
     "vite-plugin-checker": "^0.14.4",
-    "vite-plugin-minify": "^3.0.0",
-    "vite-plugin-mkcert": "^2.1.0"
+    "vite-plugin-minify": "^3.0.0"
   }
 }

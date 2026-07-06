@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import path from 'node:path';
-import mkcert from 'vite-plugin-mkcert';
-import viteOpenLocalIpPlugin, { bonjourHost } from './_dev/vite-open-local-ip-plugin';
+import fs from 'node:fs';
+import viteOpenLocalIpPlugin from './_dev/vite-open-local-ip-plugin';
 import htmlIncludePlugin from './_dev/vite-html-include-plugin.ts';
 import { ViteMinifyPlugin } from 'vite-plugin-minify';
 import minifyManifestPlugin from './_dev/vite-minify-manifest-plugin.ts';
@@ -25,7 +25,6 @@ const crossOriginHeaders = {
 export default defineConfig({
   plugins: [
     htmlIncludePlugin(),
-    mkcert({ savePath: './_dev/.mkcert', hosts: [bonjourHost] }),
     viteOpenLocalIpPlugin(),
     ViteMinifyPlugin(),
     minifyManifestPlugin(),
@@ -43,7 +42,14 @@ export default defineConfig({
   ],
   server: {
     host: true,
-    https: true,
+    // Certs openssl maison (_dev/certs, gitignorés) plutôt que vite-plugin-mkcert : celui-ci
+    // copiait le nom complet du compte macOS (Unicode "zalgo" avec octets invalides) dans le
+    // subject du cert ET de la CA — Chrome tolère, Safari desktop/iOS rejette la connexion.
+    // Régénération : voir _dev/certs/README.md. Trust : keychain macOS + simctl add-root-cert.
+    https: {
+      key: fs.readFileSync(path.resolve(__dirname, '_dev/certs/dev-key.pem')),
+      cert: fs.readFileSync(path.resolve(__dirname, '_dev/certs/dev-cert.pem')),
+    },
     // cloudflared quick-tunnel (*.trycloudflare.com) n'est pas une IP LAN ni localhost —
     // Vite rejetterait la requête avec "This host is not allowed" sans cette entrée
     allowedHosts: ['.trycloudflare.com'],
