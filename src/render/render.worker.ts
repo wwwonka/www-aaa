@@ -3,7 +3,9 @@
 import '../_dev/workerErrorRelay';
 import * as Comlink from 'comlink';
 import { RenderManager } from './RenderManager';
+import type { PairingActions, ShellContext } from './RenderManager';
 import type { AppState, AppEvent } from '../core/AppOrchestrator';
+import type { PairingPeerInfo } from '../ui/panels/PairingPanel';
 import { devLoadersReady } from './assets/registerDefaultLoaders';
 
 const manager = new RenderManager();
@@ -17,14 +19,29 @@ const api = {
     await manager.init(canvas, targetFps);
   },
 
-  /** Rôle + URL de la page, fournis par le main avant `setSendToAsm` — voir `RenderManager.setShellContext`. */
-  setShellContext(ctx: { role: 'controller' | 'receiver'; pageUrl: string }): void {
+  /** Rôle + URL + identité de session, fournis par le main avant `setSendToAsm` — voir `RenderManager.setShellContext`. */
+  setShellContext(ctx: ShellContext): void {
     manager.setShellContext(ctx);
   },
 
-  /** Bascule searching ⇄ paired de l'overlay de pairing (`null` = retour à searching). */
+  /** Bascule searching ⇄ paired de l'overlay de pairing + prompt du title (`null` = retour à searching). */
   setControllerPaired(peerName: string | null): void {
     manager.setControllerPaired(peerName);
+  },
+
+  /** Peers du rôle opposé découverts dans la room — chips cliquables sur le receiver. */
+  setDiscoveredPeers(peers: PairingPeerInfo[]): void {
+    manager.setDiscoveredPeers(peers);
+  },
+
+  /** Callbacks réseau (proxy Comlink) invoqués par les chips de pairing — voir `RenderManager.setPairingActions`. */
+  setPairingActions(actions: PairingActions): void {
+    manager.setPairingActions(actions);
+  },
+
+  /** Affiche un toast au-dessus de tout (slide-in depuis le haut, auto-dismiss). */
+  showToast(message: string): void {
+    manager.showToast(message);
   },
 
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {

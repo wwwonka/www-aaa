@@ -7,13 +7,23 @@ import { loadFont } from '../../render/assets/loadAsset';
 /** Rôle local vu par l'UI — le worker n'importe pas la détection main-thread (`ContextManager`). */
 export type PairingRole = 'controller' | 'receiver';
 
+/** Peer découvert, relayé depuis le canal de pairing main-thread (structurellement identique à `DiscoveredPeer` côté signaling — pas d'import croisé input→ui). */
+export interface PairingPeerInfo {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface PairingPanelOptions {
   /** Rôle local — décide des textes et de la présence du QR (receiver seulement). */
   readonly role: PairingRole;
   /** URL de la page (origin+pathname), lue côté main — `location` du worker n'est pas celle de la page. */
   readonly pageUrl: string;
-  /** Nom affiché dans le chip "THIS DEVICE IS" (placeholder aléatoire tant que Trystero n'existe pas). */
+  /** Code de session du receiver, encodé dans le QR via `?r=` — `null` côté controller. */
+  readonly roomCode: string | null;
+  /** Nom de ce device (généré côté main, voir `input/signaling/identity.ts`). */
   readonly deviceName: string;
+  /** Clic sur le chip d'un peer découvert (receiver) — remonte au main qui envoie `connect`. */
+  readonly onConnectPeer: (peerId: string) => void;
 }
 
 const GRAY = 0x8a8a8a;
@@ -30,11 +40,15 @@ export class PairingPanel extends UIComponent {
   private readonly _status: TextLabel;
   private readonly _heading: TextLabel;
   private readonly _searchOnly: readonly Container[];
+  private readonly _peerList: Container;
+  private readonly _onConnectPeer: (peerId: string) => void;
   private readonly _role: PairingRole;
+  private _paired = false;
 
-  private constructor({ role, pageUrl, deviceName }: PairingPanelOptions) {
+  private constructor({ role, pageUrl, roomCode, deviceName, onConnectPeer }: PairingPanelOptions) {
     super();
     this._role = role;
+    this._onConnectPeer = onConnectPeer;
 
     this.node = new Container();
     this.node.layout = {
@@ -81,14 +95,19 @@ export class PairingPanel extends UIComponent {
 
     const chip = this._buildDeviceChip(deviceName);
 
+    // Rangée des controllers découverts — remplace visuellement le QR dès qu'un peer s'annonce.
+    this._peerList = new Container();
+    this._peerList.layout = { flexDirection: 'row', gap: 16 };
+    this._peerList.visible = false;
+
     const searchOnly: Container[] = [];
     this.node.addChild(this._status.node, this._heading.node);
-    if (isReceiver) {
-      const qr = new QR({ text: `${pageUrl}?controller` });
+    if (isReceiver && roomCode !== null) {
+      const qr = new QR({ text: `${pageUrl}?r=${roomCode}` });
       this.node.addChild(qr.node);
       searchOnly.push(qr.node);
     }
-    this.node.addChild(url.node, divider, thisDeviceIs.node, chip);
+    this.node.addChild(this._peerList, url.node, divider, thisDeviceIs.node, chip);
     searchOnly.push(url.node);
     this._searchOnly = searchOnly;
   }
@@ -106,20 +125,55 @@ export class PairingPanel extends UIComponent {
    * @param peerName - Nom du peer connecté, ou `null` pour revenir à l'état searching.
    */
   setPaired(peerName: string | null): void {
-    const isReceiver = this._role === 'receiver';
+    this._paired = peerName !== null;
     if (peerName !== null) {
       this._status.node.text = 'PAIRED WITH';
       this._heading.node.text = peerName.toUpperCase();
+      this._peerList.visible = false;
       for (const node of this._searchOnly) node.visible = false;
     } else {
-      this._status.node.text = isReceiver
-        ? 'SEARCHING FOR A CONTROLLER'
-        : 'SEARCHING FOR A RECEIVER';
-      this._heading.node.text = isReceiver
-        ? 'CONNECT GAMEPAD OR\nSCAN FROM PHONE'
-        : 'OPEN GAME ON PC OR TV';
-      for (const node of this._searchOnly) node.visible = true;
+      this._showSearching();
     }
+  }
+
+  /**
+   * Receiver : liste des controllers découverts dans la room — chips cliquables qui remplacent
+   * le QR. Une liste vide restaure l'état searching (sauf si déjà pairé).
+   *
+   * @param peers - Peers annoncés par le canal de pairing (voir `AppHost`).
+   */
+  setDiscoveredPeers(peers: readonly PairingPeerInfo[]): void {
+    for (const chip of this._peerList.removeChildren()) chip.destroy({ children: true });
+    for (const peer of peers) this._peerList.addChild(this._buildPeerChip(peer));
+
+    if (this._paired) return;
+    if (peers.length > 0) {
+      this._status.node.text =
+        peers.length > 1 ? `${peers.length} CONTROLLERS FOUND` : 'CONTROLLER FOUND';
+      this._heading.node.text = 'TAP TO CONNECT';
+      this._peerList.visible = true;
+      for (const node of this._searchOnly) node.visible = false;
+    } else {
+      this._showSearching();
+    }
+  }
+
+  private _showSearching(): void {
+    const isReceiver = this._role === 'receiver';
+    this._status.node.text = isReceiver ? 'SEARCHING FOR A CONTROLLER' : 'SEARCHING FOR A RECEIVER';
+    this._heading.node.text = isReceiver
+      ? 'CONNECT GAMEPAD OR\nSCAN FROM PHONE'
+      : 'OPEN GAME ON PC OR TV';
+    this._peerList.visible = false;
+    for (const node of this._searchOnly) node.visible = true;
+  }
+
+  private _buildPeerChip(peer: PairingPeerInfo): Container {
+    const chip = this._buildDeviceChip(peer.name);
+    chip.eventMode = 'static';
+    chip.cursor = 'pointer';
+    chip.on('pointertap', () => this._onConnectPeer(peer.id));
+    return chip;
   }
 
   private _buildDeviceChip(deviceName: string): Container {

@@ -29,10 +29,24 @@
 >   - Outillage debug device (dev only) : `remoteConsole`/`workerErrorRelay` relaient les
 >     erreurs page+workers vers `/__devlog` → terminal Vite + `_dev/.devlog`.
 >
-> **Prochaine étape : Étape 2 — Pairing WebRTC/Trystero** (sections 5 et 11), scénario 1
-> uniquement. L'UI est prête (états searching/paired via `renderApi.setControllerPaired`) ;
-> il reste le signaling réel dans `src/input/signaling/`. Le playbook CLAUDE.md §15
-> s'applique : critique d'architecture + validation utilisateur AVANT d'implémenter.
+> - **Étape 2** (2026-07-06) — **Pairing WebRTC/Trystero, scénario 1** : signaling réel dans
+>   `src/input/signaling/` (`PairingChannel.ts` — factory Trystero MQTT derrière une interface
+>   swappable, actions `presence`/`connect`/`paired`/`start`, discovery filtrée par rôle
+>   opposé ; `identity.ts` — code de room 5 chars + nom de device lisible). Room = code de
+>   session : le QR encode `origin/?r=CODE` et `?r=` seul implique le rôle controller
+>   (`queryFlags.ts`) ; receiver joint la room en lazy à `OPEN_PAIRING` (`app/pairingHost.ts`),
+>   controller au boot. Flow de confirmation : les controllers découverts apparaissent en chips
+>   cliquables à la place du QR → `connect` → `paired` des deux côtés. Post-pairing : toasts
+>   (`ToastOverlayScreen`/`ToastPanel`/`ToastCard`, couche notifications hors `ScreenManager`,
+>   slide-in du haut), sheet fermée, prompt title "CONNECT CONTROLLER" → "START GAME",
+>   `GamepadScreen` (fond noir + START) comme écran de base du controller ; un `PLAY` local est
+>   propagé au peer via l'action `start` (interception dans le proxy `sendToAsm` d'`AppHost`)
+>   → `IN_GAME` synchronisé des deux côtés. Vérifié en mode workers sur deux onglets Chrome
+>   (discovery, pairing, toasts, START croisé, départ de peer → retour searching).
+>
+> **Prochaine étape : Étape 3 — Boids + Havok en local** (section 11), à valider d'abord en
+> `?monolith`. Le playbook CLAUDE.md §15 s'applique : critique d'architecture + validation
+> utilisateur AVANT d'implémenter.
 
 ## 0. Contexte et lecture préalable
 
@@ -295,13 +309,15 @@ l'encadré d'avancement en tête de document)
   `?controller` → pairing plein écran au boot ; validé en mode workers sur Chrome desktop
   ET simulateur iPhone (iOS 18.6).
 
-**Étape 2 — Pairing WebRTC (scénario 1 uniquement)** ⬅️ **PROCHAINE ÉTAPE**
+**Étape 2 — Pairing WebRTC (scénario 1 uniquement)** ✅ FAIT (voir l'encadré d'avancement
+en tête de document — élargie : toasts, START GAME synchronisé, GamepadScreen)
 
-- Porter le flow de la section 5 dans `src/input/signaling/`.
-- Vérification : deux devices sur le même réseau se découvrent et atteignent l'état
-  "paired".
+- ~~Porter le flow de la section 5 dans `src/input/signaling/`~~ — fait, plus le flow de
+  confirmation par chip cliquable côté receiver et le lancement de partie synchronisé.
+- Vérification ✅ : deux devices sur le même réseau se découvrent, atteignent "paired",
+  et un START d'un côté passe les deux devices en `IN_GAME`.
 
-**Étape 3 — Boids + Havok en local (sans réseau)**
+**Étape 3 — Boids + Havok en local (sans réseau)** ⬅️ **PROCHAINE ÉTAPE**
 
 - Implémenter `BoidSimulation.ts`, `PhysicsEngine.ts`, `spatialPartitioning.ts` ; ajouter
   `@babylonjs/havok` ; construire la scène thématique avec 10-30 boids + objets

@@ -3,11 +3,21 @@ import { UIComponent } from '../UIComponent';
 import { TextLabel } from '../components/TextLabel';
 import { loadFont } from '../../render/assets/loadAsset';
 
-/** Title text + "connect controller" prompt, both independently animatable (see `TextLabel`'s `animatableId`). */
+export interface TitleMenuPanelHandlers {
+  /** Click du prompt quand aucun controller n'est pairé — ouvre le pairing. */
+  readonly onConnectController: () => void;
+  /** Click du prompt quand un controller est pairé (`START GAME`) — lance la partie. */
+  readonly onPlay: () => void;
+}
+
+/** Title text + prompt "CONNECT CONTROLLER" ⇄ "START GAME" (selon l'état pairé), both independently animatable (see `TextLabel`'s `animatableId`). */
 export class TitleMenuPanel extends UIComponent {
   readonly node: Container;
 
-  private constructor(onConnectController: () => void) {
+  private readonly _prompt: TextLabel;
+  private _controllerConnected = false;
+
+  private constructor(handlers: TitleMenuPanelHandlers) {
     super();
 
     this.node = new Container();
@@ -30,7 +40,7 @@ export class TitleMenuPanel extends UIComponent {
       animatableId: 'title',
     });
 
-    const connectController = new TextLabel({
+    this._prompt = new TextLabel({
       text: 'CONNECT CONTROLLER',
       style: {
         fill: 0xaaaaaa,
@@ -39,25 +49,32 @@ export class TitleMenuPanel extends UIComponent {
         align: 'center',
         letterSpacing: 2,
       },
-      onClick: onConnectController,
+      onClick: () =>
+        this._controllerConnected ? handlers.onPlay() : handlers.onConnectController(),
       animatableId: 'connectController',
     });
 
-    this.node.addChild(title.node, connectController.node);
+    this.node.addChild(title.node, this._prompt.node);
   }
 
   /**
    * Loads and registers fezbox into this Worker's `FontFaceSet` before any `TextLabel` using it is constructed.
    *
-   * @param onConnectController - Click handler for the "connect controller" prompt.
+   * @param handlers - Click handlers du prompt — voir {@link TitleMenuPanelHandlers}.
    */
-  static async create(onConnectController: () => void): Promise<TitleMenuPanel> {
+  static async create(handlers: TitleMenuPanelHandlers): Promise<TitleMenuPanel> {
     const face = await loadFont('fezbox.otf');
     (
       self as unknown as WorkerGlobalScope & {
         fonts: FontFaceSet;
       }
     ).fonts.add(face);
-    return new TitleMenuPanel(onConnectController);
+    return new TitleMenuPanel(handlers);
+  }
+
+  /** Bascule le prompt "CONNECT CONTROLLER" ⇄ "START GAME" selon l'état pairé. */
+  setControllerConnected(connected: boolean): void {
+    this._controllerConnected = connected;
+    this._prompt.node.text = connected ? 'START GAME' : 'CONNECT CONTROLLER';
   }
 }

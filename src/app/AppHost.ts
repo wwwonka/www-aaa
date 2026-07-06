@@ -12,6 +12,8 @@ import type { AssetsManagerApi } from '../core/AssetsManager';
 import { allocateSystems } from '../core/SystemAllocator';
 import type { SystemHostApi } from '../core/SystemHost.worker';
 import type { QueryFlags } from './platform/queryFlags';
+import { setupPairingHost } from './pairingHost';
+import { generateDeviceName, generateRoomCode } from '../input/signaling/identity';
 
 /**
  * Boots the app shell: detects the runtime context, installs browser guards, spins up the
@@ -28,7 +30,10 @@ export class AppHost {
   async start(
     flags?: QueryFlags,
   ): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
-    const ctx = detectAppContext(flags?.forcedRole);
+    // Un `?r=CODE` seul (URL scannée depuis le QR d'un receiver) implique le rôle controller ;
+    // les flags explicites `?controller`/`?receiver` gardent la priorité.
+    const impliedRole = flags?.roomCode != null ? ('controller' as const) : null;
+    const ctx = detectAppContext(flags?.forcedRole ?? impliedRole);
     installBrowserGuards();
     void registerServiceWorker(ctx.runtime);
 
@@ -77,14 +82,32 @@ export class AppHost {
 
     await renderApi.init(Comlink.transfer(offscreen, [offscreen]));
 
+    // Identité de session (jamais persistée) : le receiver génère son code de room dès le boot
+    // (le QR est construit une seule fois avec les screens) mais ne joint la room MQTT qu'à
+    // OPEN_PAIRING (voir pairingHost) ; le controller reprend le code scanné dans `?r=`.
+    const shellRole = ctx.role === 'controller' ? ('controller' as const) : ('receiver' as const);
+    const roomCode = shellRole === 'receiver' ? generateRoomCode() : (flags?.roomCode ?? null);
+    const deviceName = generateDeviceName();
+
     // Avant setSendToAsm (qui construit les screens) : le worker ne peut ni détecter le rôle ni
     // lire l'URL de la page — son `location` pointe sur le script du worker.
     await renderApi.setShellContext({
-      role: ctx.role === 'controller' ? 'controller' : 'receiver',
+      role: shellRole,
       pageUrl: `${window.location.origin}${window.location.pathname}`,
+      roomCode,
+      deviceName,
     });
 
-    await renderApi.setSendToAsm(Comlink.proxy((event: AppEvent) => appOrchestrator.send(event)));
+    const pairing = setupPairingHost({ role: shellRole, roomCode, deviceName, renderApi });
+
+    await renderApi.setSendToAsm(
+      Comlink.proxy((event: AppEvent) => {
+        // Un PLAY local (START GAME / START) doit aussi lancer la partie sur le peer pairé —
+        // l'action réseau part d'ici, le `onStart` distant n'émet que le PLAY local (pas d'écho).
+        if (event.type === 'PLAY') pairing.notifyLocalPlay();
+        appOrchestrator.send(event);
+      }),
+    );
 
     // Miroir du survol UI poussé par le render worker — lu synchroniquement par le handler
     // dblclick→plein écran des PWA desktop (voir platform/pwa/AppWindowFullscreen.ts).
@@ -99,17 +122,10 @@ export class AppHost {
     // warmUp() parallélisé (un par asset) — sans déduplication, showScreen() (et donc
     // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
     // vrai changement d'écran.
+    // Le miroir searching ⇄ paired vers l'UI (setControllerPaired, avec le vrai nom du peer)
+    // appartient désormais à pairingHost — ici on ne relaye que les changements d'écran.
     let lastScreenState: string | undefined;
-    let lastHasController = false;
     appOrchestrator.subscribe((snapshot) => {
-      // Miroir searching ⇄ paired vers l'overlay de pairing — le nom réel du peer arrivera avec
-      // l'identité Trystero (Étape 2), placeholder générique en attendant.
-      const { hasController } = snapshot.context;
-      if (hasController !== lastHasController) {
-        lastHasController = hasController;
-        void renderApi.setControllerPaired(hasController ? 'controller' : null);
-      }
-
       if (snapshot.value === lastScreenState) return;
       lastScreenState = snapshot.value as string;
       void renderApi.showScreen(snapshot.value as AppState);

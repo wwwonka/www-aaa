@@ -2,12 +2,16 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { UIScreen } from '../UIScreen';
 import { easeIn, easeOut } from '../layout';
 import { PairingPanel } from '../panels/PairingPanel';
-import type { PairingRole } from '../panels/PairingPanel';
+import type { PairingPeerInfo, PairingRole } from '../panels/PairingPanel';
 
 interface PairingOverlayOptions {
   readonly role: PairingRole;
   readonly pageUrl: string;
+  /** Code de session encodé dans le QR (`?r=`) — `null` côté controller. */
+  readonly roomCode: string | null;
   readonly deviceName: string;
+  /** Clic sur le chip d'un peer découvert — relayé au main (envoi de `connect`). */
+  readonly onConnectPeer: (peerId: string) => void;
   /** Invoqué par le backdrop (receiver) ou le ✕ (controller) — remonte `CLOSE_PAIRING` au main. */
   readonly onClose: () => void;
 }
@@ -77,6 +81,11 @@ export class PairingOverlayScreen extends UIScreen {
   /** Relaye searching ⇄ paired au panneau — appelé par `RenderManager` sur `CONTROLLER_CONNECTED`. */
   setPaired(peerName: string | null): void {
     this._panel.setPaired(peerName);
+  }
+
+  /** Relaye la liste des peers découverts au panneau (receiver) — voir `PairingPanel.setDiscoveredPeers`. */
+  setDiscoveredPeers(peers: readonly PairingPeerInfo[]): void {
+    this._panel.setDiscoveredPeers(peers);
   }
 
   /** Receiver : slide-up custom (pas le fade de base) ; controller : fade `UIScreen` standard. */

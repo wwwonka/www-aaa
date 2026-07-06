@@ -6,8 +6,11 @@ import { playAnimation } from '../../render/animation/AnimationPlayer';
 export class TitleScreen extends UIScreen {
   readonly layer = 'overlayUI' as const;
 
+  private readonly _panel: TitleMenuPanel;
+
   private constructor(width: number, height: number, panel: TitleMenuPanel) {
     super(width, height);
+    this._panel = panel;
     // Chaque sous-composant (title, connectController) contrôle sa propre opacité via
     // AnimationRegistry (voir TextLabel) — le screen lui-même reste visible en permanence pour
     // ne pas masquer un fade indépendant par sous-composant.
@@ -20,14 +23,21 @@ export class TitleScreen extends UIScreen {
    *
    * @param onConnectController - Click handler du prompt "CONNECT CONTROLLER" — remonte
    * `OPEN_PAIRING` à l'orchestrateur (voir `RenderManager.setSendToAsm`).
+   * @param onPlay - Click handler du prompt "START GAME" (controller pairé) — remonte `PLAY`.
    */
   static async create(
     width: number,
     height: number,
     onConnectController: () => void,
+    onPlay: () => void,
   ): Promise<TitleScreen> {
-    const panel = await TitleMenuPanel.create(onConnectController);
+    const panel = await TitleMenuPanel.create({ onConnectController, onPlay });
     return new TitleScreen(width, height, panel);
+  }
+
+  /** Miroir de l'état pairé — bascule le prompt du menu (voir `TitleMenuPanel.setControllerConnected`). */
+  setControllerConnected(connected: boolean): void {
+    this._panel.setControllerConnected(connected);
   }
 
   // Override complet (pas de `super.onEnter()`) — ce screen n'utilise pas le tween fade
