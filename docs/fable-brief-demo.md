@@ -1,12 +1,37 @@
 # Brief — Démo jouable pour Fable
 
-> **État d'avancement (2026-07-05)** : Étape 0 terminée et commitée (`22be292` sur
-> `feature/title-screen-theatre`) — ESLint 10 flat config (`eslint.config.ts`, jiti) +
-> Prettier + vite-plugin-checker (lint/tsc en worker thread, overlay dev), conventions
-> encodées en règles (naming `_` privés, pas de préfixe `I`, `no-explicit-any`,
-> `src/shared/` sans imports UI/rendu), code existant mis en conformité, passe de
-> formatage globale, et `"strict": true` activé dans `tsconfig.json` (0 erreur).
-> **Prochaine étape : Étape 1 — Routing & rôles** (section 11). Le playbook CLAUDE.md §15
+> **État d'avancement (2026-07-06)** : Étapes 0 et 1 terminées et pushées sur
+> `feature/title-screen-theatre`.
+>
+> - **Étape 0** (`22be292`) — ESLint 10 flat config + Prettier + vite-plugin-checker,
+>   conventions encodées en règles, `"strict": true` (0 erreur).
+> - **Étape 1** (`a911c26`, élargie au-delà du brief) — routing `?controller`/`?receiver`
+>   (`queryFlags.ts`, override session-only, jamais persisté ; pas de `?dev`, les outils
+>   chargent sous `import.meta.env.DEV` via `initDevMode`) **+ UI de pairing complète** :
+>   état `PAIRING_MODE` dans l'orchestrateur (`OPEN_PAIRING`/`CLOSE_PAIRING`, ouvert depuis
+>   "CONNECT CONTROLLER" du Title Screen, plus tard depuis le Pause Menu), écrans overlay
+>   dans `ScreenManager` (le screen sous-jacent reste visible), `PairingOverlayScreen`
+>   (sheet glissante receiver / quasi-plein-écran controller), `PairingPanel` (états
+>   searching/paired — le trigger réseau réel arrive à l'étape 2), composant `QR`
+>   (matrice `qrcode` → Graphics, encode `origin/?controller`). Un device controller boote
+>   directement sur le pairing plein écran.
+> - **Corrections transverses au passage** (`a911c26`…`4e48851`) :
+>   - `pointerBridge` : les clics Pixi n'avaient jamais fonctionné en mode workers
+>     (`pointerup` sur `self` → `pointerupoutside`, jamais de `pointertap`) — corrigé.
+>   - Certs dev openssl (`_dev/certs/`) au lieu de vite-plugin-mkcert, dont la CA
+>     contenait des octets Unicode invalides que Safari rejette (voir
+>     `_dev/certs/README.md` pour régénération + trust macOS/simulateur).
+>   - **Écran noir Safari iOS résolu** : cause principale = `@babylonjs/core/pure` exclu
+>     du pre-bundling (~1400 modules ES dans le module worker → limite WebKit, worker tué) ;
+>     désormais `optimizeDeps.include`, sûr grâce à `RegisterStandardEngineExtensions()`.
+>     Aussi : anti-304 workers réparé (validateurs conditionnels supprimés, en-têtes COEP
+>     garantis) et en-tête CORP ajouté aux réponses synthétisées par le service worker.
+>   - Outillage debug device (dev only) : `remoteConsole`/`workerErrorRelay` relaient les
+>     erreurs page+workers vers `/__devlog` → terminal Vite + `_dev/.devlog`.
+>
+> **Prochaine étape : Étape 2 — Pairing WebRTC/Trystero** (sections 5 et 11), scénario 1
+> uniquement. L'UI est prête (états searching/paired via `renderApi.setControllerPaired`) ;
+> il reste le signaling réel dans `src/input/signaling/`. Le playbook CLAUDE.md §15
 > s'applique : critique d'architecture + validation utilisateur AVANT d'implémenter.
 
 ## 0. Contexte et lecture préalable
@@ -253,19 +278,24 @@ Après chaque étape : un message de résumé (ce qui a été fait, risques rest
 reste à faire) puis **attendre un go explicite de l'utilisateur** avant de continuer —
 conforme au playbook CLAUDE.md §15.
 
-**Étape 0 — Outillage qualité** ✅ FAIT (commit `22be292` + `strict: true` non commité)
+**Étape 0 — Outillage qualité** ✅ FAIT (commit `22be292`)
 
 - Configurer ESLint + Prettier alignés sur les conventions de la section 3 (actuellement
   absents du repo).
 - Vérification : le lint/format tourne sans erreur sur le code existant.
 
-**Étape 1 — Routing & rôles**
+**Étape 1 — Routing & rôles** ✅ FAIT (commits `a911c26` → `4e48851`, élargie : voir
+l'encadré d'avancement en tête de document)
 
-- Ajouter `?controller` / `?receiver` / `?dev` dans `src/main.ts` (seul `?monolith`
-  existe).
-- Vérification : chaque query param affiche le bon mode/écran isolément.
+- ~~Ajouter `?controller` / `?receiver` / `?dev` dans `src/main.ts`~~ — fait pour
+  `?controller`/`?receiver` (`src/app/platform/queryFlags.ts`) ; `?dev` abandonné par
+  décision utilisateur (les outils dev chargent sous `import.meta.env.DEV`).
+- En plus du brief : UI de pairing complète (`PAIRING_MODE`, overlay, QR) — voir encadré.
+- Vérification ✅ : URL vierge → Title Screen ; clic "CONNECT CONTROLLER" → sheet QR ;
+  `?controller` → pairing plein écran au boot ; validé en mode workers sur Chrome desktop
+  ET simulateur iPhone (iOS 18.6).
 
-**Étape 2 — Pairing WebRTC (scénario 1 uniquement)**
+**Étape 2 — Pairing WebRTC (scénario 1 uniquement)** ⬅️ **PROCHAINE ÉTAPE**
 
 - Porter le flow de la section 5 dans `src/input/signaling/`.
 - Vérification : deux devices sur le même réseau se découvrent et atteignent l'état
