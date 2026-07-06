@@ -41,7 +41,16 @@ export function handleAssetFetch(event: FetchEvent): boolean {
   event.respondWith(
     dbPromise
       .then((db) => getAsset(db, path))
-      .then((cached) => (cached ? new Response(cached.blob) : fetch(event.request)))
+      .then((cached) =>
+        cached
+          ? // CORP explicite : la page tourne sous COEP require-corp, et WebKit (Safari) exige
+            // l'en-tête sur chaque réponse — y compris celles synthétisées ici depuis IDB, qui
+            // sinon sont silencieusement bloquées (écran noir : police/anim jamais chargées).
+            new Response(cached.blob, {
+              headers: { 'Cross-Origin-Resource-Policy': 'same-origin' },
+            })
+          : fetch(event.request),
+      )
       .catch(() => fetch(event.request)),
   );
   return true;

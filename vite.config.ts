@@ -9,6 +9,7 @@ import { bundleSizePlugin } from './_dev/vite-bundle-size-plugin.ts';
 import assetManifestPlugin from './_dev/vite-asset-manifest-plugin.ts';
 import workerNoCachePlugin from './_dev/vite-worker-no-cache-plugin.ts';
 import animPlugin from './_dev/vite-anim-plugin.ts';
+import devlogPlugin from './_dev/vite-devlog-plugin.ts';
 import checker from 'vite-plugin-checker';
 
 // COEP 'require-corp' est requis pour SharedArrayBuffer
@@ -32,6 +33,7 @@ export default defineConfig({
     assetManifestPlugin(),
     workerNoCachePlugin(),
     animPlugin(),
+    devlogPlugin(),
     // Lint + typecheck dans un worker thread séparé — zéro impact sur l'HMR.
     // enableBuild: false — `pnpm build` fait déjà tourner tsc, inutile de payer le check deux fois
     checker({
@@ -59,11 +61,14 @@ export default defineConfig({
   },
   preview: { headers: crossOriginHeaders },
   worker: { format: 'es' },
-  // Babylon est déjà en ESM pur — le pre-bundler esbuild de Vite tree-shake des exports
-  // du barrel @babylonjs/core/pure (ex: UniversalCamera, MeshBuilder) ce qui les rend undefined.
-  // On exclut @babylonjs/core pour que Vite serve les fichiers originaux directement.
+  // Babylon DOIT être pré-bundlé : servir le barrel @babylonjs/core/pure non bundlé =
+  // ~1400 modules ES individuels dans le module worker de rendu, ce qui dépasse une limite
+  // WebKit et tue le worker sur iOS (ErrorEvent vide, écran noir). L'ancien problème du
+  // pre-bundling (exports du barrel tree-shakés par esbuild) est couvert par l'appel explicite
+  // à RegisterStandardEngineExtensions() dans RenderManager — vérifier MeshBuilder/caméras
+  // après toute montée de version Babylon.
   optimizeDeps: {
-    exclude: ['@babylonjs/core'],
+    include: ['@babylonjs/core/pure'],
   },
   resolve: {
     alias: {

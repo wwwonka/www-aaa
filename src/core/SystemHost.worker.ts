@@ -7,6 +7,9 @@
  *
  * Remplace l'ancien `assetsManager.worker.ts` codé en dur — voir `docs/system-allocator.md`.
  */
+// En premier — doit être évalué avant tout autre import pour attraper leurs erreurs d'évaluation
+// (no-op en prod, voir le fichier).
+import '../_dev/workerErrorRelay';
 import * as Comlink from 'comlink';
 import { systemFactories, type SystemId } from './systems/registry';
 import type { SystemLifecycle } from './systems/SystemLifecycle';

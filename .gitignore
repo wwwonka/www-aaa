@@ -35,3 +35,4 @@ Icon?
 .agentsroom/handoff-transcript-*.txt
 .agentsroom/handoff-summary-*.md
 _dev/certs/*.pem
+_dev/.devlog

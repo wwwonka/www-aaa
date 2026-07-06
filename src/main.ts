@@ -1,5 +1,10 @@
 import { parseQueryFlags } from './app/platform/queryFlags';
 
+if (import.meta.env.DEV) {
+  const { installRemoteConsole } = await import('./_dev/remoteConsole');
+  installRemoteConsole();
+}
+
 const flags = parseQueryFlags(window.location.search);
 
 if (import.meta.env.DEV && flags.monolith) {

@@ -1,3 +1,6 @@
+// En premier — doit être évalué avant tout autre import pour attraper leurs erreurs d'évaluation
+// (no-op en prod, voir le fichier).
+import '../_dev/workerErrorRelay';
 import * as Comlink from 'comlink';
 import { RenderManager } from './RenderManager';
 import type { AppState, AppEvent } from '../core/AppOrchestrator';
