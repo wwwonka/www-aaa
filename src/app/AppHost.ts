@@ -4,14 +4,24 @@ import { mountEventHandlers }             from './events/_index'
 import { installBrowserGuards }           from './guards/_index'
 import { detectAppContext }               from './platform/ContextManager'
 import { registerServiceWorker }          from './platform/serviceWorkerRegister'
+import { setupPwaExperience }             from './platform/pwa/_index'
 import { appOrchestrator }                from '../core/AppOrchestrator'
 import { createAssetsManager }            from '../core/AssetsManager'
 import type { AssetsManagerApi }          from '../core/AssetsManager'
 import { allocateSystems }                from '../core/SystemAllocator'
 import type { SystemHostApi }             from '../core/SystemHost.worker'
 
+/**
+ * Boots the app shell: detects the runtime context, installs browser guards, spins up the
+ * assets manager (worker or inline, per {@link allocateSystems}), transfers the canvas to the
+ * render worker, and wires the orchestrator's screen transitions to the renderer.
+ */
 export class AppHost {
-  async start(): Promise<void> {
+  /**
+   * Runs the full startup sequence and returns the live handles the caller needs
+   * once the canvas has been handed off to the render worker.
+   */
+  async start(): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
     const ctx = detectAppContext()
     installBrowserGuards()
     registerServiceWorker(ctx.runtime)
@@ -55,24 +65,26 @@ export class AppHost {
 
     await renderApi.setSendToAsm(Comlink.proxy((event) => appOrchestrator.send(event as any)))
 
+    // Miroir du survol UI poussé par le render worker — lu synchroniquement par le handler
+    // dblclick→plein écran des PWA desktop (voir platform/pwa/AppWindowFullscreen.ts).
+    let overGameUI = false
+    await renderApi.setOverGameUI(Comlink.proxy((over: boolean) => { overGameUI = over }))
+
+    // xstate émet un nouveau snapshot à chaque `.send()`, y compris les events ASSET_PROGRESS du
+    // warmUp() parallélisé (un par asset) — sans déduplication, showScreen() (et donc
+    // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
+    // vrai changement d'écran.
+    let lastScreenState: string | undefined
     appOrchestrator.subscribe(snapshot => {
+      if (snapshot.value === lastScreenState) return
+      lastScreenState = snapshot.value as string
       renderApi.showScreen(snapshot.value as any)
     })
     appOrchestrator.startUp()
 
-    window.addEventListener('keydown', (e) => {
-      const state = appOrchestrator.getSnapshot().value
-      if (e.key === ' ') {
-        appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' })
-        appOrchestrator.send({ type: 'PLAY' })
-        assetsManager.persist()
-      }
-      if (e.key === 'Enter') {
-        if (state === 'IN_GAME')     appOrchestrator.send({ type: 'PAUSE' })
-        else if (state === 'PAUSED') appOrchestrator.send({ type: 'RESUME' })
-      }
-    })
-
     mountEventHandlers({ canvas, renderWorker })
+    setupPwaExperience(ctx.runtime, () => overGameUI)
+
+    return { assetsManager, renderApi }
   }
 }

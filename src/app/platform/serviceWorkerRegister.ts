@@ -1,5 +1,9 @@
 import type { RuntimeCategory } from './runtimeDetect'
 
+/**
+ * Enregistre le service worker et, sur Firefox desktop, lui demande d'activer le favicon
+ * transparent une fois actif (voir transparentFavicon.ts pour le pourquoi).
+ */
 export async function registerServiceWorker(runtime: RuntimeCategory): Promise<void> {
   if (!('serviceWorker' in navigator)) return
 

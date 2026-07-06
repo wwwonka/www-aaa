@@ -21,4 +21,4 @@ const meshLoader: IResourceLoader<{ meshes: AbstractMesh[] }> = {
   },
 }
 
-registerLoader(['glb', 'gltf'], meshLoader)
+registerLoader(['glb', 'gltf'], 'models', meshLoader)

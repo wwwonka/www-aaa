@@ -1,0 +1,102 @@
+{
+  "sheetsById": {
+    "TitleScreen": {
+      "staticOverrides": {
+        "byObject": {
+          "connectController": {
+            "opacity": 0.6835443037974683
+          }
+        }
+      },
+      "sequence": {
+        "subUnitsPerUnit": 30,
+        "length": 10,
+        "type": "PositionalSequence",
+        "tracksByObject": {
+          "connectController": {
+            "trackData": {
+              "orLr8O-xH2": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "connectController:[\"opacity\"]",
+                "keyframes": [
+                  {
+                    "id": "RvLajYHsg7",
+                    "position": 0.667,
+                    "connectedRight": true,
+                    "handles": [
+                      0.5,
+                      1,
+                      0.39,
+                      0.575
+                    ],
+                    "type": "bezier",
+                    "value": 0
+                  },
+                  {
+                    "id": "NvTwRyxKJh",
+                    "position": 1.2,
+                    "connectedRight": true,
+                    "handles": [
+                      0.565,
+                      1,
+                      0.5,
+                      0
+                    ],
+                    "type": "bezier",
+                    "value": 0.6835443037974683
+                  }
+                ]
+              }
+            },
+            "trackIdByPropPath": {
+              "[\"opacity\"]": "orLr8O-xH2"
+            }
+          },
+          "title": {
+            "trackData": {
+              "y0A-Ria8eV": {
+                "type": "BasicKeyframedTrack",
+                "__debugName": "title:[\"opacity\"]",
+                "keyframes": [
+                  {
+                    "id": "wSL3hnoW9a",
+                    "position": 0,
+                    "connectedRight": true,
+                    "handles": [
+                      0.5,
+                      1,
+                      0.5,
+                      0
+                    ],
+                    "type": "bezier",
+                    "value": 0
+                  },
+                  {
+                    "id": "8cqPymC2jt",
+                    "position": 0.933,
+                    "connectedRight": true,
+                    "handles": [
+                      0.0167470525187567,
+                      0.5223529411764706,
+                      0.5,
+                      0
+                    ],
+                    "type": "bezier",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "trackIdByPropPath": {
+              "[\"opacity\"]": "y0A-Ria8eV"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitionVersion": "0.4.0",
+  "revisionHistory": [
+    "FSYWKfxT08wlsJnb"
+  ]
+}

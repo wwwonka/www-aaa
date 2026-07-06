@@ -25,4 +25,4 @@ const textureLoader: IResourceLoader<Texture> = {
   },
 }
 
-registerLoader(['png', 'jpg', 'jpeg', 'webp'], textureLoader)
+registerLoader(['png', 'jpg', 'jpeg', 'webp'], 'texture', textureLoader)

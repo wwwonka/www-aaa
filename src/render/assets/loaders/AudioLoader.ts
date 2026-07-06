@@ -13,4 +13,4 @@ const audioLoader: IResourceLoader<AudioBuffer> = {
   },
 }
 
-registerLoader(['mp3', 'ogg', 'wav'], audioLoader)
+registerLoader(['mp3', 'ogg', 'wav'], 'audio', audioLoader)

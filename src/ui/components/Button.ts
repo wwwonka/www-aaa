@@ -1,10 +1,20 @@
 import { Container, Graphics, Text, TextStyle } from 'pixi.js'
+import { UIComponent } from '../UIComponent'
 
-export class Button extends Container {
+/** A rounded, always-interactive text button. */
+export class Button extends UIComponent {
+  readonly node: Container
+
   private _bg: Graphics
 
+  /**
+   * @param label - Button text.
+   * @param onClick - Click handler; wired via `UIComponent.interactive = true`.
+   */
   constructor(label: string, onClick: () => void) {
     super()
+
+    this.node = new Container()
 
     this._bg = new Graphics()
       .roundRect(0, 0, 120, 40, 8)
@@ -18,12 +28,10 @@ export class Button extends Container {
     text.anchor.set(0.5)
     text.position.set(60, 20)
 
-    this.addChild(this._bg, text)
+    this.node.addChild(this._bg, text)
 
-    this.eventMode = 'static'
-    this.cursor    = 'pointer'
-    this.on('pointerup', onClick)
-    this.on('pointerover', () => this._bg.tint = 0xaaccff)
-    this.on('pointerout',  () => this._bg.tint = 0xffffff)
+    this.onClick = onClick
+    this.onHover = (isOver) => { this._bg.tint = isOver ? 0xaaccff : 0xffffff }
+    this.interactive = true
   }
 }

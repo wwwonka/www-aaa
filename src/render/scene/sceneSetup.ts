@@ -1,8 +1,9 @@
-import { Engine, Scene } from '@babylonjs/core/pure'
+import { Engine, Scene} from '@babylonjs/core/pure'
 import { createCamera } from './camera'
 import { createLights }  from './lights'
 import { loadMesh }      from '../assets/loadAsset'
 
+/** One-time 3D scene bootstrap — camera, lights, and the demo mesh. Called once by `RenderManager.init()`. */
 export async function sceneSetup(_engine: Engine, scene: Scene): Promise<void> {
   createCamera(scene)
   createLights(scene)
@@ -16,9 +17,9 @@ export async function sceneSetup(_engine: Engine, scene: Scene): Promise<void> {
   //   box.rotation.y += 0.01
   // })
 
-  const { meshes } = await loadMesh('game/models/shiny_fish.glb', scene)
+  const { meshes } = await loadMesh('shiny_fish.glb', scene)
   const root = meshes[0]
-  root.position.set(0, 0, 0)
+  root.position.set(0, -2.4, 0)
   scene.onBeforeRenderObservable.add(() => {
     root.rotation.y += 0.01
   })

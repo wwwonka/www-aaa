@@ -1,12 +1,20 @@
 import type { FrozenGameLayer } from '../layers/layer2_frozenGame'
 import { easeIn, easeOut }     from '../../ui/layout'
 
+/**
+ * Blur transition state: `'normal'` (not active), `'pausing'`/`'resuming'` (strength ramping),
+ * `'frozen'` (fully blurred, holding at {@link MAX_STRENGTH} while paused).
+ */
 type RenderMode = 'normal' | 'pausing' | 'frozen' | 'resuming'
 
 const PAUSE_DURATION  = 350
 const RESUME_DURATION = 350
 const MAX_STRENGTH    = 12
 
+/**
+ * Drives the pause-screen blur transition: freezes the game frame into {@link FrozenGameLayer} and
+ * ramps a blur strength in/out over {@link PAUSE_DURATION}/{@link RESUME_DURATION} ms.
+ */
 export class PauseBlurEffect {
   private _frozen:   FrozenGameLayer
   private _gl:       WebGL2RenderingContext
@@ -31,6 +39,7 @@ export class PauseBlurEffect {
   get mode(): RenderMode  { return this._mode }
   get isActive(): boolean { return this._mode !== 'normal' }
 
+  /** Captures the current frame into {@link FrozenGameLayer} and starts the pausing (blur-in) transition. */
   enter(): void {
     if (this.isActive) this._frozen.deactivate()
     this._frozen.activate(this._gl, this._width(), this._height())
@@ -38,11 +47,13 @@ export class PauseBlurEffect {
     this._mode    = 'pausing'
   }
 
+  /** Starts the resuming (blur-out) transition; the frozen frame is released once it completes. */
   exit(): void {
     this._elapsed = 0
     this._mode    = 'resuming'
   }
 
+  /** Advances the current transition by `delta` ms. No-op when `'normal'` or `'frozen'`. */
   update(delta: number): void {
     if (this._mode === 'normal' || this._mode === 'frozen') return
 
@@ -66,6 +77,7 @@ export class PauseBlurEffect {
     }
   }
 
+  /** Re-captures the frozen frame at the new dimensions, preserving the current blur strength. No-op when not active. */
   resize(width: number, height: number): void {
     if (this.isActive) {
       this._frozen.deactivate()

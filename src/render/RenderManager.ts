@@ -11,6 +11,9 @@ import { TitleScreen }          from '../ui/screens/TitleScreen'
 import { InGameScreen }         from '../ui/screens/InGameScreen'
 import { startRenderLoop }      from './renderLoop'
 import type { AppState, AppEvent } from '../core/AppOrchestrator'
+import { applyAnimatedValue }   from './animation/AnimationRegistry'
+import { updateAnimations, pausePlayback, resumePlayback } from './animation/AnimationPlayer'
+import { dispatchPointerEvent } from './events/pointerBridge'
 
 export class RenderManager {
   private _canvas!:         OffscreenCanvas
@@ -25,7 +28,14 @@ export class RenderManager {
   private _targetFps!:      number
   private _stopLoop!:       () => void
   private _lastTime:        number = 0
+  private _overGameUI:      boolean = false
+  private _notifyOverGameUI?: (over: boolean) => void
 
+  /**
+   * @param canvas - The `OffscreenCanvas` transferred from the main thread; Babylon and Pixi share
+   * its single WebGL2 context (see project constraints — never two canvases/contexts).
+   * @param targetFps - Initial render loop target; see {@link setFps}.
+   */
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
     this._canvas = canvas
     this._width  = canvas.width  || 800
@@ -43,6 +53,9 @@ export class RenderManager {
 
     this._ui = await createUIRenderer(this._gl, this._width, this._height)
 
+    // Le vrai OffscreenCanvas comme domElement — cas documenté par Pixi (voir EventSystem.setCursor).
+    this._ui.renderer.events.setTargetElement(this._canvas as unknown as HTMLElement)
+
     this._pauseBlur = new PauseBlurEffect(
       this._ui.frozenGame,
       this._gl,
@@ -56,14 +69,61 @@ export class RenderManager {
     this._listenMessages()
   }
 
-  setSendToAsm(fn: (event: AppEvent) => void): void {
+  /**
+   * Generic entry point for external value injection (dev bridge via Comlink, or any future driver).
+   *
+   * @param id - Registry id, e.g. `'title.opacity'` — matches what a `UIComponent` registered via `registerAnimatable`.
+   * @param value - The value to apply.
+   */
+  applyExternalValue(id: string, value: number): void {
+    applyAnimatedValue(id, value)
+  }
+
+  /** Generic — this module doesn't know or care why playback is being paused. */
+  pauseAnimationPlayback(): void {
+    pausePlayback()
+  }
+
+  /** Re-enables playback and immediately restarts the current screen's animation (see `ScreenManager.replayCurrentReveal`). */
+  resumeAnimationPlayback(): void {
+    resumePlayback()
+    this._screenManager?.replayCurrentReveal()
+  }
+
+  /** @param fn - Callback invoked whenever a screen (e.g. `PauseScreen`) needs to send an `AppEvent` back to the state machine. */
+  async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
     this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI)
 
     this._screenManager.register('PAUSED',       new PauseScreen(fn, this._width, this._height))
-    this._screenManager.register('TITLE_SCREEN', new TitleScreen(this._width, this._height))
+    this._screenManager.register('TITLE_SCREEN', await TitleScreen.create(this._width, this._height))
     this._screenManager.register('IN_GAME',      new InGameScreen(this._width, this._height))
   }
 
+  /**
+   * Miroite vers le main thread le fait que le curseur survole un contrôle Pixi interactif.
+   * Le main thread ne peut pas hit-tester la scène (elle vit ici), et son handler `dblclick`
+   * doit décider synchroniquement s'il déclenche le plein écran — voir
+   * `app/platform/pwa/AppWindowFullscreen.ts`.
+   *
+   * On écoute `pointerover`/`pointerout` sur `stage` : ils bubblent depuis le contrôle
+   * interactif touché (`UIComponent` pose `eventMode='static'`), les zones non interactives ne
+   * sont jamais cibles de survol. Passer d'un bouton au fond émet donc bien un `pointerout`.
+   *
+   * @param fn - Callback (proxifié Comlink) invoqué à chaque changement d'état de survol.
+   */
+  async setOverGameUI(fn: (over: boolean) => void): Promise<void> {
+    this._notifyOverGameUI = fn
+    this._ui.stage.on('pointerover', () => this._setOverGameUI(true))
+    this._ui.stage.on('pointerout',  () => this._setOverGameUI(false))
+  }
+
+  private _setOverGameUI(over: boolean): void {
+    if (over === this._overGameUI) return
+    this._overGameUI = over
+    this._notifyOverGameUI?.(over)
+  }
+
+  /** @param state - The `AppState` to display; also drives the pause-blur transition. */
   showScreen(state: AppState): void {
     if (state === 'PAUSED') {
       this._pauseBlur.enter()
@@ -73,6 +133,7 @@ export class RenderManager {
     this._screenManager?.transition(state)
   }
 
+  /** @param fps - New render loop target; restarts the loop with the new interval. */
   setFps(fps: number): void {
     this._targetFps = fps
     this._stopLoop()
@@ -102,6 +163,13 @@ export class RenderManager {
       if (e.data?.type === 'visibility') {
         e.data.hidden ? this._stopLoop() : this._restartLoop()
       }
+      if (e.data?.type === 'pointer') {
+        // EventSystem réécrit rootBoundary.rootTarget depuis renderer.lastObjectRendered à chaque
+        // event — cette détection ne se met jamais à jour correctement dans notre setup (contexte
+        // GL partagé avec Babylon), donc on la réaffirme avant chaque dispatch plutôt qu'une fois.
+        this._ui.renderer.events.rootBoundary.rootTarget = this._ui.stage
+        dispatchPointerEvent(this._canvas, this._ui.renderer, e.data)
+      }
     })
   }
 
@@ -118,6 +186,7 @@ export class RenderManager {
     this._lastTime = ts
 
     this._screenManager?.update(delta)
+    updateAnimations(delta)
 
     if (this._pauseBlur.mode !== 'frozen') {
       this._scene.render()

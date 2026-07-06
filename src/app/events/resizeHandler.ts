@@ -1,3 +1,4 @@
+/** Refs shared by the DOM-side event handlers to relay browser events to the render worker. */
 export interface WorkerRefs {
   canvas:       HTMLCanvasElement
   renderWorker: Worker
@@ -15,8 +16,10 @@ const supportsDevicePixelBox = (() => {
   }
 })()
 
-// Relaie les resize DOM au render worker — OffscreenCanvas n'a pas accès à window
-// Le worker applique le resize + re-render dans le même tick pour éviter tout flash
+/**
+ * Relaie les resize DOM au render worker — OffscreenCanvas n'a pas accès à window.
+ * Le worker applique le resize + re-render dans le même tick pour éviter tout flash.
+ */
 export function setupResizeHandler(workers: WorkerRefs): void {
   const { canvas, renderWorker } = workers
   const dpr = window.devicePixelRatio ?? 1

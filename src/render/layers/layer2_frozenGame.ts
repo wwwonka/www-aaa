@@ -1,6 +1,7 @@
 import { Container, Sprite, Texture } from 'pixi.js'
 import { KawaseBlurFilter } from 'pixi-filters'
 
+/** Captures the framebuffer into a still (blurrable) sprite, used during the pause transition. */
 export interface FrozenGameLayer {
   container:     Container
   activate:      (gl: WebGL2RenderingContext, width: number, height: number) => void
@@ -10,6 +11,7 @@ export interface FrozenGameLayer {
 }
 
 // GL est bottom-up, PixiJS attend top-down
+/** Flips a raw `readPixels` buffer vertically to match PixiJS's top-down row order. */
 function flipY(src: Uint8Array, width: number, height: number): Uint8Array {
   const dst    = new Uint8Array(src.length)
   const stride = width * 4
@@ -19,6 +21,11 @@ function flipY(src: Uint8Array, width: number, height: number): Uint8Array {
   return dst
 }
 
+/**
+ * Reads the currently bound framebuffer's pixels back to the CPU and wraps them as an `ImageBitmap`.
+ * Allocates fresh buffers each call — only used at pause-entry and, per frame, while resuming
+ * (short-lived transition state, not the steady-state render path).
+ */
 function readFramebuffer(gl: WebGL2RenderingContext, width: number, height: number): ImageBitmap {
   const pixels = new Uint8Array(width * height * 4)
   gl.bindFramebuffer(gl.READ_FRAMEBUFFER, null)
@@ -31,6 +38,7 @@ function readFramebuffer(gl: WebGL2RenderingContext, width: number, height: numb
   return offscreen.transferToImageBitmap()
 }
 
+/** Factory for the frozen-game layer — see {@link FrozenGameLayer}. */
 export function createFrozenGameLayer(): FrozenGameLayer {
   const container = new Container()
   container.visible = false

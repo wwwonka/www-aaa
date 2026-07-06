@@ -4,6 +4,10 @@ node_modules/
 # Build
 dist/
 
+# Animations : seuls les .json (natifs Theatre.js) sont committés — le .anim binaire est un
+# artefact généré à `pnpm build` (voir _dev/vite-anim-plugin.ts), jamais dans le dépôt
+public/game/animations/*.anim
+
 # Dev certificates — clés privées, ne jamais committer
 _dev/.mkcert/
 
@@ -24,3 +28,6 @@ Icon?
 .TemporaryItems
 .VolumeIcon.icns
 .com.apple.timemachine.donotpresent
+
+# Google Drive
+.tmp.driveupload

@@ -3,6 +3,7 @@ import { detectRuntimeContext, type RuntimeCategory } from './runtimeDetect'
 export type DevicePlatform = 'mobile' | 'desktop' | 'ambiguous'
 export type DeviceRole     = 'controller' | 'receiver' | 'unknown'
 
+/** Résultat combiné de la détection plateforme + runtime + rôle pour cet appareil. */
 export interface AppContext {
   platform: DevicePlatform
   role:     DeviceRole
@@ -31,10 +32,12 @@ function roleFromPlatform(platform: DevicePlatform): DeviceRole {
   return localStorage.getItem(ROLE_KEY) as DeviceRole | null ?? 'unknown'
 }
 
+/** Persiste le rôle choisi par l'utilisateur pour un appareil 'ambiguous' (ex: iPad). */
 export function saveRole(role: 'controller' | 'receiver'): void {
   localStorage.setItem(ROLE_KEY, role)
 }
 
+/** Détecte plateforme, rôle et runtime de l'appareil courant. */
 export function detectAppContext(): AppContext {
   const { category: runtime } = detectRuntimeContext()
   const platform = detectPlatform(navigator.userAgent, runtime)

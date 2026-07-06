@@ -1,6 +1,9 @@
 import type { Scene, AbstractMesh, Texture } from '@babylonjs/core/pure'
-import { getLoader, defaultResolve } from './registry'
+import { getLoaderEntry, defaultResolve } from './registry'
 import type { LoaderContext } from './types'
+import type { AnimationTrackSet } from './loaders/AnimationLoader'
+import { assetPath } from '../../core/assetPath'
+import type { AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin'
 
 const inFlight = new Map<string, Promise<unknown>>()
 
@@ -19,67 +22,81 @@ function extensionOf(path: string): string {
   return path.slice(dot + 1)
 }
 
-async function loadAssetUncached<T>(path: string, ctx: LoaderContext): Promise<T> {
-  const ext = extensionOf(path)
-  const loader = getLoader(ext)
-  if (!loader) throw new Error(`loadAsset: no loader registered for extension ".${ext}" (${path})`)
-  const blob = await (loader.resolve ?? defaultResolve)(path)
-  return loader.parse(blob, path, ctx) as Promise<T>
+async function loadAssetUncached<T>(path: string, ctx: LoaderContext, entry: NonNullable<ReturnType<typeof getLoaderEntry>>): Promise<T> {
+  const blob = await (entry.loader.resolve ?? defaultResolve)(path)
+  return entry.loader.parse(blob, path, ctx) as Promise<T>
 }
 
 /**
- * Single entry point to load any asset type, dispatching by file extension to the loader
- * registered via `registerLoader` (see `registry.ts`). Dedupes concurrent calls for the same
- * `path` through {@link inFlight} — two systems requesting the same mesh before either resolves
- * get back the exact same Promise, avoiding redundant fetch/parse work and race conditions.
+ * Single entry point to load any asset type. Takes a bare filename (`'fezbox.otf'`) — the
+ * extension picks the loader (see `registerLoader` in `registry.ts`), and the loader's registered
+ * `type` (its folder under `public/<namespace>/`) resolves the full path automatically via
+ * `assetPath()`, so call sites never build a path by hand. Dedupes concurrent calls for the same
+ * resolved path through {@link inFlight} — two systems requesting the same mesh before either
+ * resolves get back the exact same Promise, avoiding redundant fetch/parse work and race conditions.
  *
  * Resolved entries stay cached forever (re-parsing a glTF isn't free, and callers expect the same
  * instance back); rejected entries are evicted so a transient failure doesn't permanently poison
  * the cache.
+ *
+ * @param filename - Bare filename, e.g. `'fezbox.otf'` — no path, no `assetPath()` needed.
+ * @param ctx - Loader-specific context (e.g. `{ scene }` for mesh/texture loaders).
+ * @param namespace - `public/<namespace>/` root; defaults to `'game'` (runtime game assets, as opposed to `'app'` shell assets).
+ * @returns The parsed asset, typed by the caller (loaders are untyped internally — see the `T` wrappers below for the typed surface).
+ * @throws If no loader is registered for `filename`'s extension.
  */
-export function loadAsset<T>(rawPath: string, ctx: LoaderContext = {}): Promise<T> {
-  const path = normalizePath(rawPath)
+export function loadAsset<T>(filename: string, ctx: LoaderContext = {}, namespace: AssetNamespace = 'game'): Promise<T> {
+  const ext   = extensionOf(filename)
+  const entry = getLoaderEntry(ext)
+  if (!entry) throw new Error(`loadAsset: no loader registered for extension ".${ext}" (${filename})`)
+
+  const path = normalizePath(assetPath(namespace, entry.type, filename))
   const cached = inFlight.get(path)
   if (cached) {
     console.debug(`[loadAsset] cache hit: ${path}`)
     return cached as Promise<T>
   }
   console.debug(`[loadAsset] cache miss: ${path}`)
-  const promise = loadAssetUncached<T>(path, ctx).catch(err => { inFlight.delete(path); throw err })
+  const promise = loadAssetUncached<T>(path, ctx, entry).catch(err => { inFlight.delete(path); throw err })
   inFlight.set(path, promise)
   return promise
 }
 
 /** Loads a glTF/GLB mesh — thin wrapper over {@link loadAsset} that makes `scene` mandatory at the type level. */
-export function loadMesh(path: string, scene: Scene): Promise<{ meshes: AbstractMesh[] }> {
-  return loadAsset(path, { scene })
+export function loadMesh(filename: string, scene: Scene): Promise<{ meshes: AbstractMesh[] }> {
+  return loadAsset(filename, { scene })
 }
 
 /** Loads a Babylon `Texture` — thin wrapper over {@link loadAsset} that makes `scene` mandatory at the type level. */
-export function loadTexture(path: string, scene: Scene): Promise<Texture> {
-  return loadAsset(path, { scene })
+export function loadTexture(filename: string, scene: Scene): Promise<Texture> {
+  return loadAsset(filename, { scene })
 }
 
 /** Loads and decodes a font file into a ready `FontFace` — thin wrapper over {@link loadAsset}. */
-export function loadFont(path: string): Promise<FontFace> {
-  return loadAsset(path)
+export function loadFont(filename: string): Promise<FontFace> {
+  return loadAsset(filename)
 }
 
 /** Loads and decodes an audio file into an `AudioBuffer` — thin wrapper over {@link loadAsset}. */
-export function loadAudio(path: string): Promise<AudioBuffer> {
-  return loadAsset(path)
+export function loadAudio(filename: string): Promise<AudioBuffer> {
+  return loadAsset(filename)
+}
+
+/** Loads a baked animation file (`.anim` binary in prod, `.anim.json` in dev) — thin wrapper over {@link loadAsset}. */
+export function loadAnimation(filename: string): Promise<AnimationTrackSet> {
+  return loadAsset(filename)
 }
 
 /**
  * Loads a batch of assets in parallel (`Promise.all`, not sequential) and returns them keyed the
- * same way as the input `paths` map — convenient for preloading a "pack" of assets for a screen or
- * level in one call.
+ * same way as the input `filenames` map — convenient for preloading a "pack" of assets for a
+ * screen or level in one call.
  */
 export function loadAssets<T extends Record<string, string>>(
-  paths: T,
+  filenames: T,
   scene?: Scene,
 ): Promise<{ [K in keyof T]: unknown }> {
-  const entries = Object.entries(paths) as [keyof T, string][]
-  return Promise.all(entries.map(([key, path]) => loadAsset(path, { scene }).then(value => [key, value] as const)))
+  const entries = Object.entries(filenames) as [keyof T, string][]
+  return Promise.all(entries.map(([key, filename]) => loadAsset(filename, { scene }).then(value => [key, value] as const)))
     .then(results => Object.fromEntries(results) as { [K in keyof T]: unknown })
 }

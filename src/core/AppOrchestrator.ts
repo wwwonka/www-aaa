@@ -4,6 +4,7 @@ import { createMachine, createActor, assign } from 'xstate'
 // Types
 // ---------------------------------------------------------------------------
 
+/** `PLAYING_ON_PHONE` — le jeu continue de tourner mais le rendu est transféré à un contrôleur mobile (voir event `TRANSFER`). */
 export type AppState =
   | 'TITLE_SCREEN'
   | 'IN_GAME'

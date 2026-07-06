@@ -17,7 +17,8 @@ sw.addEventListener('activate', (event: ExtendableEvent) => {
 
 sw.addEventListener('message', (event: ExtendableMessageEvent) => {
   if (event.data?.type === 'enable-transparent-favicon') {
-    enableTransparentFavicon()
+    // waitUntil empêche le SW d'être tué avant la fin de l'écriture Cache API
+    event.waitUntil(enableTransparentFavicon())
   }
 })
 
