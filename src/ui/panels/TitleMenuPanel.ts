@@ -2,6 +2,7 @@ import { Container } from 'pixi.js';
 import { UIComponent } from '../UIComponent';
 import { TextLabel } from '../components/TextLabel';
 import { loadFont } from '../../render/assets/loadAsset';
+import { registerFontFace } from '../registerFontFace';
 
 export interface TitleMenuPanelHandlers {
   /** Click du prompt quand aucun controller n'est pairé — ouvre le pairing. */
@@ -64,11 +65,7 @@ export class TitleMenuPanel extends UIComponent {
    */
   static async create(handlers: TitleMenuPanelHandlers): Promise<TitleMenuPanel> {
     const face = await loadFont('fezbox.otf');
-    (
-      self as unknown as WorkerGlobalScope & {
-        fonts: FontFaceSet;
-      }
-    ).fonts.add(face);
+    registerFontFace(face);
     return new TitleMenuPanel(handlers);
   }
 

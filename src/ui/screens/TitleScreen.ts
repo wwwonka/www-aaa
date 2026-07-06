@@ -45,11 +45,15 @@ export class TitleScreen extends UIScreen {
   // AnimationRegistry. C'est ici, et nulle part ailleurs (pas RenderManager), que ce screen
   // déclenche sa propre animation — idempotent, donc sûr à ré-invoquer (voir ScreenManager.replayCurrentReveal).
   onEnter(): void {
+    this.node.visible = true;
     this.node.eventMode = 'passive';
     void playAnimation('title-screen');
   }
 
   onLeave(): void {
+    // Les alphas des sous-composants restent pilotés par l'AnimationRegistry — on masque le
+    // node entier, sinon le title reste affiché par-dessus le jeu.
+    this.node.visible = false;
     this.node.eventMode = 'none';
   }
 

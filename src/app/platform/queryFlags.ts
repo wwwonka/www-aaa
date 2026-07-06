@@ -6,6 +6,11 @@ export interface QueryFlags {
   readonly roomCode: string | null;
   /** `?monolith` — boot mono-thread de debug (DEV uniquement, voir main.ts). */
   readonly monolith: boolean;
+  /**
+   * `?dev` — flow de dev en mode workers : controller simulé + clavier (DEV uniquement, ignoré
+   * en prod : la garde `hasController` reste le seul chemin vers `IN_GAME`).
+   */
+  readonly dev: boolean;
 }
 
 /**
@@ -32,5 +37,6 @@ export function parseQueryFlags(search: string): QueryFlags {
     forcedRole: controller ? 'controller' : receiver ? 'receiver' : null,
     roomCode,
     monolith: params.has('monolith'),
+    dev: params.has('dev'),
   };
 }

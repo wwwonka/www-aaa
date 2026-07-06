@@ -72,6 +72,18 @@ const api = {
     manager.showScreen(state);
   },
 
+  /**
+   * Vues Float32 sur les SAB écrits par le sim worker (matrices boids/props, cible) — le clone
+   * structuré d'une TypedArray adossée à un SharedArrayBuffer partage la mémoire, zéro copie.
+   */
+  attachGameBuffers(buffers: {
+    boidMatrices: Float32Array;
+    propMatrices: Float32Array;
+    targetPosition: Float32Array;
+  }): void {
+    manager.attachGameBuffers(buffers);
+  },
+
   dispose(): void {
     manager.dispose();
   },

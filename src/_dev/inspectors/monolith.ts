@@ -1,10 +1,14 @@
 import { RenderManager } from '../../render/RenderManager';
+import { devLoadersReady } from '../../render/assets/registerDefaultLoaders';
 import { detectAppContext } from '../../app/platform/ContextManager';
 import { appOrchestrator } from '../../core/AppOrchestrator';
 import { installBrowserGuards } from '../../app/guards/_index';
 import { registerServiceWorker } from '../../app/platform/serviceWorkerRegister';
 import { DebugOverlay } from '../overlay/DebugOverlay';
 import { setupDevTools } from '../setup';
+import { createGameSim } from '../../sim/GameSim';
+import type { GameSim } from '../../sim/GameSim';
+import { attachKeyboardSimControls } from './simControls';
 
 // TODO: Les méthodes debug (scene, resize, setVisibility, attachDebugOverlay, etc.)
 // seront rajoutées à RenderManager quand on implémente le debug tooling complet.
@@ -23,7 +27,35 @@ export async function startMonolithMode(): Promise<void> {
 
   const manager = new RenderManager() as any;
 
+  // Comme render.worker.ts : les loaders d'assets s'enregistrent par effet de bord de l'import,
+  // et le loader JSON dev doit être prêt avant le premier loadMesh de sceneSetup.
+  await devLoadersReady;
   await manager.init(canvas);
+
+  // Sur le main thread, `engine.resize()` (déclenché par les messages resize) recalcule le
+  // backing store depuis clientWidth × hardwareScaling — à 1, il écrase notre taille physique
+  // par la taille CSS et désaligne Babylon du layout Pixi (qui reste en pixels physiques).
+  // Sans objet en worker : l'OffscreenCanvas n'a pas de clientWidth.
+  manager._engine.setHardwareScalingLevel(1 / dpr);
+  window.postMessage({ type: 'resize', width: canvas.width, height: canvas.height });
+
+  // UI Pixi complète en monolith : screens + events envoyés directement à l'orchestrateur
+  // (pas de Comlink). Pas de relais pointer ici : le canvas est un vrai élément DOM, donc
+  // l'EventSystem Pixi (setTargetElement dans RenderManager.init) reçoit les événements
+  // nativement — relayer en plus via pointerBridge produirait un double dispatch et des
+  // Events synthétiques incomplets (crash elementFromPoint).
+  await manager.setSendToAsm((event: unknown) => appOrchestrator.send(event as never));
+
+  // Même contournement que pointerBridge côté worker : l'EventSystem Pixi réécrit
+  // `rootBoundary.rootTarget` depuis `renderer.lastObjectRendered` à chaque événement, et cette
+  // détection ne fonctionne pas avec notre contexte GL partagé Babylon+Pixi — on la réaffirme
+  // en phase capture, avant les listeners de l'EventSystem.
+  const reassertRootTarget = (): void => {
+    if (manager._ui) manager._ui.renderer.events.rootBoundary.rootTarget = manager._ui.stage;
+  };
+  for (const type of ['pointerdown', 'pointermove', 'pointerup', 'pointerover', 'pointerout']) {
+    window.addEventListener(type, reassertRootTarget, { capture: true });
+  }
 
   // @babylonjs/inspector doit être installé (pnpm add -D @babylonjs/inspector) avant d'activer ces lignes
   // await import('@babylonjs/inspector')
@@ -68,8 +100,47 @@ export async function startMonolithMode(): Promise<void> {
     toggleDebugOverlay: () => overlay.toggle(),
   };
 
-  appOrchestrator.subscribe((snapshot) => renderApi.showScreen(snapshot.value as any));
+  // Étape 3 (validation monolith) : la sim boids+Havok tourne sur le main thread, steppée
+  // depuis la boucle de rendu. Le wasm Havok se précharge pendant le Title Screen pour que
+  // PLAY soit instantané. En workers, ce câblage vivra dans simulation.worker.ts (étape 4).
+  const simPromise = createGameSim();
+  let sim: GameSim | null = null;
+  let currentState = '';
+
+  // Delta mesuré ici : `engine.getDeltaTime()` reste à 0 car la boucle custom (renderLoop.ts)
+  // appelle `scene.render()` sans passer par `engine.runRenderLoop`.
+  let lastFrameTs = 0;
+  manager._scene?.onBeforeRenderObservable.add(() => {
+    const now = performance.now();
+    const deltaMs = lastFrameTs ? now - lastFrameTs : 16.7;
+    lastFrameTs = now;
+    if (sim && currentState === 'IN_GAME') {
+      sim.update(deltaMs);
+    }
+  });
+
+  appOrchestrator.subscribe((snapshot) => {
+    currentState = String(snapshot.value);
+    renderApi.showScreen(snapshot.value as any);
+    if (currentState === 'IN_GAME' && !sim) {
+      void simPromise.then((created) => {
+        sim = created;
+        // Handle debug console (dev only) — inspecter/stepper la sim à la main.
+        (window as unknown as { __sim: GameSim }).__sim = created;
+        manager.attachGameBuffers({
+          boidMatrices: created.boidMatrices,
+          propMatrices: created.propMatrices,
+          targetPosition: created.targetPosition,
+        });
+        attachKeyboardSimControls((x, z) => created.setMoveInput(x, z));
+      });
+    }
+  });
   appOrchestrator.startUp();
+  // Pas de pairing en monolith : on lève la garde `hasController` pour que PLAY soit accessible,
+  // et on bascule le prompt du title sur "START GAME".
+  appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' });
+  manager.setControllerPaired('MONOLITH');
 
   const observer = new ResizeObserver((entries) => {
     for (const entry of entries) {
@@ -77,9 +148,9 @@ export async function startMonolithMode(): Promise<void> {
       const size = entry.devicePixelContentBoxSize?.[0];
       const w = size ? size.inlineSize : Math.round(entry.contentRect.width * dpr);
       const h = size ? size.blockSize : Math.round(entry.contentRect.height * dpr);
-      canvas.width = w;
-      canvas.height = h;
-      manager.resize(w, h);
+      // Même canal que le mode workers : RenderManager écoute les messages `resize` sur `self`
+      // (qui est `window` ici) et applique canvas+engine+UI dans le même tick.
+      window.postMessage({ type: 'resize', width: w, height: h });
     }
   });
   try {
@@ -97,4 +168,6 @@ export async function startMonolithMode(): Promise<void> {
   });
 
   setupDevTools(ctx, renderApi);
+  // Handle debug console (dev only) — inspecter le RenderManager à la main.
+  (window as unknown as { __rm: unknown }).__rm = manager;
 }

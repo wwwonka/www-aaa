@@ -12,6 +12,7 @@ import type { AssetsManagerApi } from '../core/AssetsManager';
 import { allocateSystems } from '../core/SystemAllocator';
 import type { SystemHostApi } from '../core/SystemHost.worker';
 import type { QueryFlags } from './platform/queryFlags';
+import type { SimulationWorkerApi } from '../sim/simulation.worker';
 import { setupPairingHost } from './pairingHost';
 import { generateDeviceName, generateRoomCode } from '../input/signaling/identity';
 
@@ -124,13 +125,54 @@ export class AppHost {
     // vrai changement d'écran.
     // Le miroir searching ⇄ paired vers l'UI (setControllerPaired, avec le vrai nom du peer)
     // appartient désormais à pairingHost — ici on ne relaye que les changements d'écran.
+    // Simulation worker (boids + Havok) — receiver uniquement : le device actif est l'unique
+    // autorité du game state (CLAUDE.md §4) ; le controller n'héberge pas de sim avant le
+    // handoff (étape 6). Spawn au boot pour précharger le wasm Havok pendant le Title Screen,
+    // buffers SAB relayés au render worker (mémoire partagée, zéro copie), start/stop sur IN_GAME.
+    let simApi: Comlink.Remote<SimulationWorkerApi> | null = null;
+    let simReady: Promise<void> | null = null;
+    if (shellRole === 'receiver') {
+      simApi = Comlink.wrap<SimulationWorkerApi>(
+        new Worker(new URL('../sim/simulation.worker.ts', import.meta.url), {
+          type: 'module',
+          name: 'SimulationWorker',
+        }),
+      );
+      simReady = simApi.init().then(async (buffers) => {
+        await renderApi.attachGameBuffers(buffers);
+      });
+      // Erreur froide (wasm indisponible…) : loggée, le title reste fonctionnel — PLAY mènera
+      // à une arène vide plutôt qu'à un boot cassé.
+      simReady.catch((err: unknown) => console.error('[AppHost] sim worker init failed:', err));
+    }
+
     let lastScreenState: string | undefined;
     appOrchestrator.subscribe((snapshot) => {
       if (snapshot.value === lastScreenState) return;
+      const wasInGame = lastScreenState === 'IN_GAME';
       lastScreenState = snapshot.value as string;
       void renderApi.showScreen(snapshot.value as AppState);
+      if (simApi !== null) {
+        if (snapshot.value === 'IN_GAME') {
+          const boundSimApi = simApi;
+          void simReady?.then(() => boundSimApi.start());
+        } else if (wasInGame) {
+          void simApi.stop();
+        }
+      }
     });
     appOrchestrator.startUp();
+
+    // `?dev` (build DEV seulement — en prod ce bloc est tree-shaké et la garde `hasController`
+    // reste le seul chemin vers IN_GAME) : controller simulé pour débloquer PLAY + pilotage
+    // clavier de la sphère de contrôle, comme en monolith.
+    if (import.meta.env.DEV && flags?.dev && shellRole === 'receiver' && simApi !== null) {
+      const boundSimApi = simApi;
+      appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' });
+      void renderApi.setControllerPaired('DEV');
+      const { attachKeyboardSimControls } = await import('../_dev/inspectors/simControls');
+      attachKeyboardSimControls((x, z) => void boundSimApi.setMoveInput(x, z));
+    }
 
     // Un device controller boote directement sur l'interface de pairing plein écran.
     if (ctx.role === 'controller') appOrchestrator.send({ type: 'OPEN_PAIRING' });

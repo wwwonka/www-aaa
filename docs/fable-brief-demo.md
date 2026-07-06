@@ -44,9 +44,45 @@
 >   → `IN_GAME` synchronisé des deux côtés. Vérifié en mode workers sur deux onglets Chrome
 >   (discovery, pairing, toasts, START croisé, départ de peer → retour searching).
 >
-> **Prochaine étape : Étape 3 — Boids + Havok en local** (section 11), à valider d'abord en
-> `?monolith`. Le playbook CLAUDE.md §15 s'applique : critique d'architecture + validation
-> utilisateur AVANT d'implémenter.
+> - **Étape 3** (2026-07-06) — **Boids + Havok en local, validée en `?monolith`** :
+>   `@babylonjs/havok` via le **binding wasm brut** (`hknp`, choix validé utilisateur — zéro
+>   import Babylon dans `src/sim/`, portable worker à l'étape 4). `src/simulation/` renommé
+>   `src/sim/`. `PhysicsEngine.ts` (monde, corps, lecture zéro-alloc des transforms via
+>   `HP_World_GetBodyBuffer`+`HEAPF32`), `BoidSimulation.ts` (steering sep/align/coh+seek,
+>   DOD, forces clampées), `spatialPartitioning.ts` (grille uniforme Int32), `GameSim.ts`
+>   (composition, pas fixe 60 Hz + accumulateur, écrit les matrices dans le SAB via
+>   `createSAB` — enfin câblé). Rendu : `BoidsRenderer` (thin instances, copie SAB→buffer
+>   local car WebGL refuse les vues SAB), `gameScene.ts` (arène, props, marqueur cible),
+>   hooks `RenderManager.attachGameBuffers`/`_setGameVisible` (bascule title↔jeu sur
+>   `showScreen`). Monolith : sim steppée depuis la boucle de rendu (delta mesuré à la main,
+>   `engine.getDeltaTime()` reste à 0 hors `runRenderLoop`), `CONTROLLER_CONNECTED` auto,
+>   WASD/flèches (`_dev/inspectors/simControls.ts`), UI complète (setSendToAsm + relais
+>   pointer/resize via `window.postMessage`). Corrections transverses : `self.fonts` →
+>   helper `ui/registerFontFace.ts` (main thread = `document.fonts`), `TitleScreen.onLeave`
+>   masque désormais le node (il restait affiché par-dessus le jeu). `BOID_COUNT` 500→24,
+>   constantes physique + `PROP_DEFS` dans `shared/config.ts`.
+>   Vérifié Chrome (monolith) : PLAY→IN_GAME, flock suit la cible, **pousse les caisses**
+>   (masse 8-14 vs 1), ~60fps+, zéro erreur console ; mode workers intact (title screen).
+>
+> - **Étape 4a** (2026-07-06) — **Sim multithread + SAB + `?dev`** (scope validé utilisateur ;
+>   l'heuristique adaptative reste à faire, voir 4b ci-dessous) : `simulation.worker.ts` héberge
+>   `GameSim` (Comlink : `init`/`start`/`stop`/`setMoveInput`), boucle auto-cadencée 60 Hz
+>   (`setTimeout` demi-pas + accumulateur GameSim), `targetPosition` passé en SAB. AppHost
+>   (receiver uniquement, §4 autorité unique) spawne le worker au boot (préchauffe wasm pendant
+>   le title), relaie les vues SAB au render worker via `attachGameBuffers` (clone structuré
+>   d'une TypedArray sur SAB = mémoire partagée, zéro copie), start/stop sur les transitions
+>   IN_GAME (dans le subscribe dédupliqué). Flag **`?dev`** (`queryFlags.ts`, honoré uniquement
+>   sous `import.meta.env.DEV` — tree-shaké en prod, la garde `hasController` reste le seul
+>   chemin vers IN_GAME) : `CONTROLLER_CONNECTED` simulé + prompt START GAME + clavier
+>   WASD/flèches → Comlink → sim worker.
+>   Vérifié Chrome : `?dev` → title → clic START GAME → IN_GAME, flock piloté clavier pousse
+>   les props (sim worker + render worker + SAB), zéro erreur console ; URL vierge → clic
+>   prompt = PAIRING_MODE et un `PLAY` forcé reste bloqué (guard).
+>
+> **Prochaine étape : Étape 4b — heuristique adaptative** (section 7) : micro-benchmark boot
+> (<50ms), fusion de workers selon les cœurs (2c → worker unifié), `?forceTier=low`. Puis
+> Étape 5 — joysticks controller → sim via WebRTC. Le playbook CLAUDE.md §15 s'applique :
+> critique d'architecture + validation utilisateur AVANT d'implémenter.
 
 ## 0. Contexte et lecture préalable
 

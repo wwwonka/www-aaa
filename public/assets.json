@@ -1,0 +1,88 @@
+{
+  "app": {
+    "misc": {
+      "app.webmanifest": {
+        "hash": "5de66e8c8954ca42",
+        "size": 2046
+      }
+    },
+    "icons": {
+      "apple-touch-icon.png": {
+        "hash": "a48c07e71082cf0b",
+        "size": 4122
+      },
+      "favicon.svg": {
+        "hash": "61bc9a161de58248",
+        "size": 9522
+      },
+      "icon.svg": {
+        "hash": "3b077ad29ee67c17",
+        "size": 178
+      },
+      "icons.svg": {
+        "hash": "900fbe934249ad12",
+        "size": 41
+      }
+    },
+    "screenshots": {
+      "desktop.png": {
+        "hash": "bcb4e18e661afef3",
+        "size": 7198
+      },
+      "mobile.png": {
+        "hash": "63fea1c49e85a9b8",
+        "size": 2427
+      }
+    },
+    "splash": {
+      "iPad_Pro_12_9_landscape.png": {
+        "hash": "e726d5698898accd",
+        "size": 10890
+      },
+      "iPad_landscape.png": {
+        "hash": "702a04458bb879df",
+        "size": 8516
+      },
+      "iPhone_14_landscape.png": {
+        "hash": "5ae3d3386e872d40",
+        "size": 8370
+      },
+      "iPhone_15_Pro_Max_landscape.png": {
+        "hash": "11f9d35ea678b8b7",
+        "size": 8975
+      },
+      "iPhone_15_Pro_landscape.png": {
+        "hash": "09b29c44c127dba7",
+        "size": 8390
+      },
+      "iPhone_XS_Max_landscape.png": {
+        "hash": "0cf01e1072a40d67",
+        "size": 8740
+      },
+      "iPhone_X_landscape.png": {
+        "hash": "32536015747747eb",
+        "size": 8106
+      }
+    }
+  },
+  "game": {
+    "anim": {
+      "title-screen.anim.json": {
+        "hash": "dc6a869f0d1f9580",
+        "size": 2816
+      }
+    },
+    "font": {
+      "fezbox.otf": {
+        "hash": "40841915b1eb5b67",
+        "size": 10316
+      }
+    },
+    "models": {
+      "shiny_fish.glb": {
+        "hash": "b79decb4c256a663",
+        "size": 19182020
+      }
+    }
+  }
+}

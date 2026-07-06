@@ -2,6 +2,9 @@ import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylo
 
 RegisterStandardEngineExtensions();
 import { sceneSetup } from './scene/sceneSetup';
+import type { SceneHandles } from './scene/sceneSetup';
+import { createGameScene } from './scene/gameScene';
+import type { GameScene, GameSceneBuffers } from './scene/gameScene';
 import { createUIRenderer } from './layers/uiRenderer';
 import type { UIRenderer } from './layers/uiRenderer';
 import { PauseBlurEffect } from './effects/PauseBlurEffect';
@@ -68,6 +71,9 @@ export class RenderManager {
   private _titleScreen: TitleScreen | null = null;
   private _toastScreen: ToastOverlayScreen | null = null;
   private _pairingActions: PairingActions | null = null;
+  private _sceneHandles: SceneHandles | null = null;
+  private _gameScene: GameScene | null = null;
+  private _gameVisible = false;
 
   /**
    * @param canvas - The `OffscreenCanvas` transferred from the main thread; Babylon and Pixi share
@@ -233,7 +239,28 @@ export class RenderManager {
     } else if (this._pauseBlur.isActive) {
       this._pauseBlur.exit();
     }
+    this._setGameVisible(state === 'IN_GAME' || state === 'PAUSED');
     this._screenManager?.transition(state);
+  }
+
+  /**
+   * Branche les buffers écrits par la simulation (matrices SAB boids/props, cible) et construit
+   * la scène de jeu — cachée tant que l'AppState ne passe pas en `IN_GAME`. Appelé par le
+   * monolith aujourd'hui, par le main (SAB partagé avec le sim worker) à l'étape 4.
+   */
+  attachGameBuffers(buffers: GameSceneBuffers): void {
+    this._gameScene?.dispose();
+    this._gameScene = createGameScene(this._scene, buffers);
+    if (this._gameVisible) this._gameScene.setVisible(true);
+  }
+
+  private _setGameVisible(visible: boolean): void {
+    if (visible === this._gameVisible) return;
+    this._gameVisible = visible;
+    this._gameScene?.setVisible(visible);
+    // La scène d'attract du title (poisson) et la scène de jeu partagent l'unique scène
+    // Babylon — on masque l'une quand l'autre est active.
+    this._sceneHandles?.titleRoot.setEnabled(!visible);
   }
 
   /** @param fps - New render loop target; restarts the loop with the new interval. */
@@ -286,7 +313,7 @@ export class RenderManager {
   }
 
   private async _setupScene(): Promise<void> {
-    await sceneSetup(this._engine, this._scene);
+    this._sceneHandles = await sceneSetup(this._engine, this._scene);
   }
 
   private _frame(ts: number): void {
@@ -298,6 +325,7 @@ export class RenderManager {
     updateAnimations(delta);
 
     if (this._pauseBlur.mode !== 'frozen') {
+      if (this._gameVisible) this._gameScene?.update();
       this._scene.render();
     }
 

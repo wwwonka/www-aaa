@@ -1,6 +1,7 @@
 import { UIScreen } from '../UIScreen';
 import { ToastPanel } from '../panels/ToastPanel';
 import { loadFont } from '../../render/assets/loadAsset';
+import { registerFontFace } from '../registerFontFace';
 
 /**
  * Overlay des toasts/notifications. Contrairement aux autres screens il n'est PAS enregistré
@@ -28,7 +29,7 @@ export class ToastOverlayScreen extends UIScreen {
   /** Charge fezbox dans le `FontFaceSet` du worker avant la première carte (même pattern que `PairingPanel`). */
   static async create(width: number, height: number): Promise<ToastOverlayScreen> {
     const face = await loadFont('fezbox.otf');
-    (self as unknown as WorkerGlobalScope & { fonts: FontFaceSet }).fonts.add(face);
+    registerFontFace(face);
     return new ToastOverlayScreen(width, height, new ToastPanel(width));
   }
 

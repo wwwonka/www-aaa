@@ -2,6 +2,7 @@ import { Graphics } from 'pixi.js';
 import { UIScreen } from '../UIScreen';
 import { TextLabel } from '../components/TextLabel';
 import { loadFont } from '../../render/assets/loadAsset';
+import { registerFontFace } from '../registerFontFace';
 
 /**
  * Écran de base du device controller (enregistré pour `TITLE_SCREEN` à la place de
@@ -42,7 +43,7 @@ export class GamepadScreen extends UIScreen {
    */
   static async create(width: number, height: number, onPlay: () => void): Promise<GamepadScreen> {
     const face = await loadFont('fezbox.otf');
-    (self as unknown as WorkerGlobalScope & { fonts: FontFaceSet }).fonts.add(face);
+    registerFontFace(face);
     return new GamepadScreen(width, height, onPlay);
   }
 

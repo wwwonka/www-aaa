@@ -3,6 +3,7 @@ import { UIComponent } from '../UIComponent';
 import { TextLabel } from '../components/TextLabel';
 import { QR } from '../components/QR';
 import { loadFont } from '../../render/assets/loadAsset';
+import { registerFontFace } from '../registerFontFace';
 
 /** Rôle local vu par l'UI — le worker n'importe pas la détection main-thread (`ContextManager`). */
 export type PairingRole = 'controller' | 'receiver';
@@ -115,7 +116,7 @@ export class PairingPanel extends UIComponent {
   /** Loads fezbox into this worker's `FontFaceSet` before any label is constructed (same pattern as `TitleMenuPanel`). */
   static async create(options: PairingPanelOptions): Promise<PairingPanel> {
     const face = await loadFont('fezbox.otf');
-    (self as unknown as WorkerGlobalScope & { fonts: FontFaceSet }).fonts.add(face);
+    registerFontFace(face);
     return new PairingPanel(options);
   }
 
