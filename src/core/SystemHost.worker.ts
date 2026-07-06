@@ -7,11 +7,11 @@
  *
  * Remplace l'ancien `assetsManager.worker.ts` codé en dur — voir `docs/system-allocator.md`.
  */
-import * as Comlink from 'comlink'
-import { systemFactories, type SystemId } from './systems/registry'
-import type { SystemLifecycle } from './systems/SystemLifecycle'
+import * as Comlink from 'comlink';
+import { systemFactories, type SystemId } from './systems/registry';
+import type { SystemLifecycle } from './systems/SystemLifecycle';
 
-const instances = new Map<SystemId, SystemLifecycle>()
+const instances = new Map<SystemId, SystemLifecycle>();
 
 /**
  * Instancie (lazy, mis en cache) puis retourne le système demandé.
@@ -22,9 +22,9 @@ const instances = new Map<SystemId, SystemLifecycle>()
  * async seraient perdues au structured clone au lieu de rester appelables à distance.
  */
 function get(id: SystemId): SystemLifecycle {
-  if (!instances.has(id)) instances.set(id, systemFactories[id]())
-  return Comlink.proxy(instances.get(id)!)
+  if (!instances.has(id)) instances.set(id, systemFactories[id]());
+  return Comlink.proxy(instances.get(id)!);
 }
 
-export type SystemHostApi = { get: typeof get }
-Comlink.expose({ get })
+export type SystemHostApi = { get: typeof get };
+Comlink.expose({ get });

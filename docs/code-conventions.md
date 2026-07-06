@@ -3,11 +3,13 @@
 ## Classes vs Fonctions
 
 ### Utilise une classe quand :
+
 - Il y a un état interne qui évolue dans le temps
 - Il y a un cycle de vie (`init`, `update`, `destroy`)
 - Plusieurs instances coexistent (ex: chaque Boid)
 
 ### Utilise une fonction quand :
+
 - C'est une transformation pure (input → output)
 - C'est une utilité appelée une fois ou rarement
 - Il n'y a qu'un seul "exemplaire" (pas besoin de class singleton)
@@ -31,20 +33,20 @@ c'est un namespace déguisé. Utiliser un module ES6 avec des fonctions exporté
 
 ## Nommage
 
-| Cas | Convention | Exemple |
-|-----|-----------|---------|
-| Classes | PascalCase | `BoidPool`, `AudioAggregator` |
-| Fichiers de classe | PascalCase | `BoidPool.ts` |
-| Fonctions, variables, instances | camelCase | `detectRuntimeContext()`, `sabManager` |
-| Fichiers utilitaires | camelCase | `sab-manager.ts`, `constants.ts` |
-| Workers | camelCase + suffixe `.worker.ts` | `simulation.worker.ts` |
-| Constantes globales | SCREAMING_SNAKE_CASE | `SAB_BOID_STRIDE` |
+| Cas                             | Convention                       | Exemple                                |
+| ------------------------------- | -------------------------------- | -------------------------------------- |
+| Classes                         | PascalCase                       | `BoidPool`, `AudioAggregator`          |
+| Fichiers de classe              | PascalCase                       | `BoidPool.ts`                          |
+| Fonctions, variables, instances | camelCase                        | `detectRuntimeContext()`, `sabManager` |
+| Fichiers utilitaires            | camelCase                        | `sab-manager.ts`, `constants.ts`       |
+| Workers                         | camelCase + suffixe `.worker.ts` | `simulation.worker.ts`                 |
+| Constantes globales             | SCREAMING_SNAKE_CASE             | `SAB_BOID_STRIDE`                      |
 
 ---
 
 ## Commentaires
 
-Commenter uniquement le *pourquoi* — jamais le *quoi*.
+Commenter uniquement le _pourquoi_ — jamais le _quoi_.
 Un bon commentaire explique une contrainte cachée, un gotcha, ou un choix non-obvious.
 
 ```ts

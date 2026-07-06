@@ -42,9 +42,9 @@ Les deux partagent le même canvas et contexte GL que Babylon.
 ## Initialisation PixiJS avec le contexte Babylon
 
 ```ts
-const gl = engine.getRenderingCanvas()!.getContext('webgl2')!
-await pixiWorld.init({ canvas: babylonCanvas, context: gl, clearBeforeRender: false })
-await pixiShell.init({ canvas: babylonCanvas, context: gl, clearBeforeRender: false })
+const gl = engine.getRenderingCanvas()!.getContext('webgl2')!;
+await pixiWorld.init({ canvas: babylonCanvas, context: gl, clearBeforeRender: false });
+await pixiShell.init({ canvas: babylonCanvas, context: gl, clearBeforeRender: false });
 ```
 
 `clearBeforeRender: false` — critique pour ne pas effacer les layers précédents.

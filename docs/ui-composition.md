@@ -10,11 +10,11 @@ sur plusieurs noms possibles (`.view` rejeté au profit de `.node`), appliquée 
 
 ```ts
 abstract class UIComponent {
-  abstract readonly node: Container
-  onClick?: () => void
-  onHover?: (isOver: boolean) => void
-  get interactive(): boolean
-  set interactive(value: boolean)   // eventMode 'static'/'none', cursor, wire les events une seule fois
+  abstract readonly node: Container;
+  onClick?: () => void;
+  onHover?: (isOver: boolean) => void;
+  get interactive(): boolean;
+  set interactive(value: boolean); // eventMode 'static'/'none', cursor, wire les events une seule fois
 }
 ```
 

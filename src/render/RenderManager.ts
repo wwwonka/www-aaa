@@ -1,35 +1,42 @@
-import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylonjs/core/pure'
+import { Engine, Scene, Color4, RegisterStandardEngineExtensions } from '@babylonjs/core/pure';
 
-RegisterStandardEngineExtensions()
-import { sceneSetup }           from './scene/sceneSetup'
-import { createUIRenderer }     from './layers/uiRenderer'
-import type { UIRenderer }      from './layers/uiRenderer'
-import { PauseBlurEffect }      from './effects/PauseBlurEffect'
-import { ScreenManager }        from '../ui/ScreenManager'
-import { PauseScreen }          from '../ui/screens/PauseScreen'
-import { TitleScreen }          from '../ui/screens/TitleScreen'
-import { InGameScreen }         from '../ui/screens/InGameScreen'
-import { startRenderLoop }      from './renderLoop'
-import type { AppState, AppEvent } from '../core/AppOrchestrator'
-import { applyAnimatedValue }   from './animation/AnimationRegistry'
-import { updateAnimations, pausePlayback, resumePlayback } from './animation/AnimationPlayer'
-import { dispatchPointerEvent } from './events/pointerBridge'
+RegisterStandardEngineExtensions();
+import { sceneSetup } from './scene/sceneSetup';
+import { createUIRenderer } from './layers/uiRenderer';
+import type { UIRenderer } from './layers/uiRenderer';
+import { PauseBlurEffect } from './effects/PauseBlurEffect';
+import { ScreenManager } from '../ui/ScreenManager';
+import { PauseScreen } from '../ui/screens/PauseScreen';
+import { TitleScreen } from '../ui/screens/TitleScreen';
+import { InGameScreen } from '../ui/screens/InGameScreen';
+import { startRenderLoop } from './renderLoop';
+import type { AppState, AppEvent } from '../core/AppOrchestrator';
+import { applyAnimatedValue } from './animation/AnimationRegistry';
+import { updateAnimations, pausePlayback, resumePlayback } from './animation/AnimationPlayer';
+import { dispatchPointerEvent } from './events/pointerBridge';
+import type { RelayedPointerData } from './events/pointerBridge';
+
+/** Messages postMessage bruts relayés par le main thread (hors RPC Comlink) — voir `app/events/`. */
+type MainThreadMessage =
+  | { type: 'resize'; width: number; height: number }
+  | { type: 'visibility'; hidden: boolean }
+  | ({ type: 'pointer' } & RelayedPointerData);
 
 export class RenderManager {
-  private _canvas!:         OffscreenCanvas
-  private _engine!:         Engine
-  private _scene!:          Scene
-  private _gl!:             WebGL2RenderingContext
-  private _ui!:             UIRenderer
-  private _pauseBlur!:      PauseBlurEffect
-  private _screenManager!:  ScreenManager
-  private _width!:          number
-  private _height!:         number
-  private _targetFps!:      number
-  private _stopLoop!:       () => void
-  private _lastTime:        number = 0
-  private _overGameUI:      boolean = false
-  private _notifyOverGameUI?: (over: boolean) => void
+  private _canvas!: OffscreenCanvas;
+  private _engine!: Engine;
+  private _scene!: Scene;
+  private _gl!: WebGL2RenderingContext;
+  private _ui!: UIRenderer;
+  private _pauseBlur!: PauseBlurEffect;
+  private _screenManager!: ScreenManager;
+  private _width!: number;
+  private _height!: number;
+  private _targetFps!: number;
+  private _stopLoop!: () => void;
+  private _lastTime: number = 0;
+  private _overGameUI: boolean = false;
+  private _notifyOverGameUI?: (over: boolean) => void;
 
   /**
    * @param canvas - The `OffscreenCanvas` transferred from the main thread; Babylon and Pixi share
@@ -37,36 +44,37 @@ export class RenderManager {
    * @param targetFps - Initial render loop target; see {@link setFps}.
    */
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
-    this._canvas = canvas
-    this._width  = canvas.width  || 800
-    this._height = canvas.height || 600
+    this._canvas = canvas;
+    this._width = canvas.width || 800;
+    this._height = canvas.height || 600;
 
     this._engine = new Engine(canvas, true, {
       deterministicLockstep: false,
       preserveDrawingBuffer: true,
-      stencil:               true,
-    })
-    this._scene = new Scene(this._engine)
-    this._scene.clearColor = new Color4(0, 0, 0, 1)
+      stencil: true,
+    });
+    this._scene = new Scene(this._engine);
+    this._scene.clearColor = new Color4(0, 0, 0, 1);
 
-    this._gl = (this._engine as any)._gl as WebGL2RenderingContext
+    // _gl est privé chez Babylon mais c'est le seul moyen de partager le contexte avec Pixi
+    this._gl = (this._engine as unknown as { _gl: WebGL2RenderingContext })._gl;
 
-    this._ui = await createUIRenderer(this._gl, this._width, this._height)
+    this._ui = await createUIRenderer(this._gl, this._width, this._height);
 
     // Le vrai OffscreenCanvas comme domElement — cas documenté par Pixi (voir EventSystem.setCursor).
-    this._ui.renderer.events.setTargetElement(this._canvas as unknown as HTMLElement)
+    this._ui.renderer.events.setTargetElement(this._canvas as unknown as HTMLElement);
 
     this._pauseBlur = new PauseBlurEffect(
       this._ui.frozenGame,
       this._gl,
       () => this._width,
       () => this._height,
-    )
+    );
 
-    await this._setupScene()
-    this._targetFps = targetFps
-    this._stopLoop  = startRenderLoop((ts) => this._frame(ts), targetFps)
-    this._listenMessages()
+    await this._setupScene();
+    this._targetFps = targetFps;
+    this._stopLoop = startRenderLoop((ts) => this._frame(ts), targetFps);
+    this._listenMessages();
   }
 
   /**
@@ -76,27 +84,30 @@ export class RenderManager {
    * @param value - The value to apply.
    */
   applyExternalValue(id: string, value: number): void {
-    applyAnimatedValue(id, value)
+    applyAnimatedValue(id, value);
   }
 
   /** Generic — this module doesn't know or care why playback is being paused. */
   pauseAnimationPlayback(): void {
-    pausePlayback()
+    pausePlayback();
   }
 
   /** Re-enables playback and immediately restarts the current screen's animation (see `ScreenManager.replayCurrentReveal`). */
   resumeAnimationPlayback(): void {
-    resumePlayback()
-    this._screenManager?.replayCurrentReveal()
+    resumePlayback();
+    this._screenManager?.replayCurrentReveal();
   }
 
   /** @param fn - Callback invoked whenever a screen (e.g. `PauseScreen`) needs to send an `AppEvent` back to the state machine. */
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
-    this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI)
+    this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI);
 
-    this._screenManager.register('PAUSED',       new PauseScreen(fn, this._width, this._height))
-    this._screenManager.register('TITLE_SCREEN', await TitleScreen.create(this._width, this._height))
-    this._screenManager.register('IN_GAME',      new InGameScreen(this._width, this._height))
+    this._screenManager.register('PAUSED', new PauseScreen(fn, this._width, this._height));
+    this._screenManager.register(
+      'TITLE_SCREEN',
+      await TitleScreen.create(this._width, this._height),
+    );
+    this._screenManager.register('IN_GAME', new InGameScreen(this._width, this._height));
   }
 
   /**
@@ -111,96 +122,100 @@ export class RenderManager {
    *
    * @param fn - Callback (proxifié Comlink) invoqué à chaque changement d'état de survol.
    */
-  async setOverGameUI(fn: (over: boolean) => void): Promise<void> {
-    this._notifyOverGameUI = fn
-    this._ui.stage.on('pointerover', () => this._setOverGameUI(true))
-    this._ui.stage.on('pointerout',  () => this._setOverGameUI(false))
+  setOverGameUI(fn: (over: boolean) => void): void {
+    this._notifyOverGameUI = fn;
+    this._ui.stage.on('pointerover', () => this._setOverGameUI(true));
+    this._ui.stage.on('pointerout', () => this._setOverGameUI(false));
   }
 
   private _setOverGameUI(over: boolean): void {
-    if (over === this._overGameUI) return
-    this._overGameUI = over
-    this._notifyOverGameUI?.(over)
+    if (over === this._overGameUI) return;
+    this._overGameUI = over;
+    this._notifyOverGameUI?.(over);
   }
 
   /** @param state - The `AppState` to display; also drives the pause-blur transition. */
   showScreen(state: AppState): void {
     if (state === 'PAUSED') {
-      this._pauseBlur.enter()
+      this._pauseBlur.enter();
     } else if (this._pauseBlur.isActive) {
-      this._pauseBlur.exit()
+      this._pauseBlur.exit();
     }
-    this._screenManager?.transition(state)
+    this._screenManager?.transition(state);
   }
 
   /** @param fps - New render loop target; restarts the loop with the new interval. */
   setFps(fps: number): void {
-    this._targetFps = fps
-    this._stopLoop()
-    this._stopLoop = startRenderLoop((ts) => this._frame(ts), fps)
+    this._targetFps = fps;
+    this._stopLoop();
+    this._stopLoop = startRenderLoop((ts) => this._frame(ts), fps);
   }
 
   dispose(): void {
-    this._stopLoop()
-    this._ui.destroy()
-    this._engine.dispose()
+    this._stopLoop();
+    this._ui.destroy();
+    this._engine.dispose();
   }
 
   private _listenMessages(): void {
-    self.addEventListener('message', (e) => {
+    self.addEventListener('message', (e: MessageEvent<MainThreadMessage>) => {
       if (e.data?.type === 'resize') {
-        const { width: w, height: h } = e.data
-        this._canvas.width  = w
-        this._canvas.height = h
-        this._width         = w
-        this._height        = h
-        this._engine.resize()
-        this._ui.resize(w, h)
-        this._pauseBlur.resize(w, h)
-        this._screenManager?.resize(w, h)
-        this._frame(performance.now())
+        const { width: w, height: h } = e.data;
+        this._canvas.width = w;
+        this._canvas.height = h;
+        this._width = w;
+        this._height = h;
+        this._engine.resize();
+        this._ui.resize(w, h);
+        this._pauseBlur.resize(w, h);
+        this._screenManager?.resize(w, h);
+        this._frame(performance.now());
       }
       if (e.data?.type === 'visibility') {
-        e.data.hidden ? this._stopLoop() : this._restartLoop()
+        if (e.data.hidden) {
+          this._stopLoop();
+        } else {
+          this._restartLoop();
+        }
       }
       if (e.data?.type === 'pointer') {
         // EventSystem réécrit rootBoundary.rootTarget depuis renderer.lastObjectRendered à chaque
         // event — cette détection ne se met jamais à jour correctement dans notre setup (contexte
         // GL partagé avec Babylon), donc on la réaffirme avant chaque dispatch plutôt qu'une fois.
-        this._ui.renderer.events.rootBoundary.rootTarget = this._ui.stage
-        dispatchPointerEvent(this._canvas, this._ui.renderer, e.data)
+        this._ui.renderer.events.rootBoundary.rootTarget = this._ui.stage;
+        dispatchPointerEvent(this._canvas, this._ui.renderer, e.data);
       }
-    })
+    });
   }
 
   private _restartLoop(): void {
-    this._stopLoop = startRenderLoop((ts) => this._frame(ts), this._targetFps)
+    this._stopLoop = startRenderLoop((ts) => this._frame(ts), this._targetFps);
   }
 
   private async _setupScene(): Promise<void> {
-    await sceneSetup(this._engine, this._scene)
+    await sceneSetup(this._engine, this._scene);
   }
 
   private _frame(ts: number): void {
-    const delta    = this._lastTime ? ts - this._lastTime : 16
-    this._lastTime = ts
+    const delta = this._lastTime ? ts - this._lastTime : 16;
+    this._lastTime = ts;
 
-    this._screenManager?.update(delta)
-    updateAnimations(delta)
+    this._screenManager?.update(delta);
+    updateAnimations(delta);
 
     if (this._pauseBlur.mode !== 'frozen') {
-      this._scene.render()
+      this._scene.render();
     }
 
-    this._pauseBlur.update(delta)
+    this._pauseBlur.update(delta);
 
     if (this._pauseBlur.isActive) {
-      const liveCapture = this._pauseBlur.mode === 'resuming'
-      this._ui.renderSplit(this._gl, this._width, this._height, liveCapture)
+      const liveCapture = this._pauseBlur.mode === 'resuming';
+      this._ui.renderSplit(this._gl, this._width, this._height, liveCapture);
     } else {
-      this._ui.renderNormal(this._gl, this._width, this._height)
+      this._ui.renderNormal(this._gl, this._width, this._height);
     }
 
-    this._engine.wipeCaches(true)
+    this._engine.wipeCaches(true);
   }
 }

@@ -13,23 +13,23 @@
 // Retourne un `dispose()`, en symétrie avec les autres handlers.
 
 // Touches qui, avec Ctrl/⌘, déclenchent le zoom clavier : '+', '-', '=' (+ sans shift), '0' (reset).
-const ZOOM_KEYS = new Set(['+', '-', '=', '0'])
+const ZOOM_KEYS = new Set(['+', '-', '=', '0']);
 
 export function setupPreventPageZoom(): () => void {
   // `passive: false` est obligatoire pour que `preventDefault` puisse annuler le zoom molette.
   const onWheel = (e: WheelEvent) => {
-    if (e.ctrlKey) e.preventDefault()
-  }
+    if (e.ctrlKey) e.preventDefault();
+  };
 
   const onKeyDown = (e: KeyboardEvent) => {
-    if ((e.ctrlKey || e.metaKey) && ZOOM_KEYS.has(e.key)) e.preventDefault()
-  }
+    if ((e.ctrlKey || e.metaKey) && ZOOM_KEYS.has(e.key)) e.preventDefault();
+  };
 
-  window.addEventListener('wheel', onWheel, { capture: true, passive: false })
-  window.addEventListener('keydown', onKeyDown, { capture: true })
+  window.addEventListener('wheel', onWheel, { capture: true, passive: false });
+  window.addEventListener('keydown', onKeyDown, { capture: true });
 
   return function dispose() {
-    window.removeEventListener('wheel', onWheel, { capture: true })
-    window.removeEventListener('keydown', onKeyDown, { capture: true })
-  }
+    window.removeEventListener('wheel', onWheel, { capture: true });
+    window.removeEventListener('keydown', onKeyDown, { capture: true });
+  };
 }

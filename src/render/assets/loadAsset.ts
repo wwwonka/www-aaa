@@ -1,11 +1,11 @@
-import type { Scene, AbstractMesh, Texture } from '@babylonjs/core/pure'
-import { getLoaderEntry, defaultResolve } from './registry'
-import type { LoaderContext } from './types'
-import type { AnimationTrackSet } from './loaders/AnimationLoader'
-import { assetPath } from '../../core/assetPath'
-import type { AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin'
+import type { Scene, AbstractMesh, Texture } from '@babylonjs/core/pure';
+import { getLoaderEntry, defaultResolve } from './registry';
+import type { LoaderContext } from './types';
+import type { AnimationTrackSet } from './loaders/AnimationLoader';
+import { assetPath } from '../../core/assetPath';
+import type { AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin';
 
-const inFlight = new Map<string, Promise<unknown>>()
+const inFlight = new Map<string, Promise<unknown>>();
 
 /**
  * Normalizes an asset path to lowercase — single source of truth for path casing, so `'Boid.glb'`
@@ -13,18 +13,22 @@ const inFlight = new Map<string, Promise<unknown>>()
  * independent loads.
  */
 function normalizePath(path: string): string {
-  return path.toLowerCase()
+  return path.toLowerCase();
 }
 
 function extensionOf(path: string): string {
-  const dot = path.lastIndexOf('.')
-  if (dot === -1) throw new Error(`loadAsset: cannot determine extension for "${path}"`)
-  return path.slice(dot + 1)
+  const dot = path.lastIndexOf('.');
+  if (dot === -1) throw new Error(`loadAsset: cannot determine extension for "${path}"`);
+  return path.slice(dot + 1);
 }
 
-async function loadAssetUncached<T>(path: string, ctx: LoaderContext, entry: NonNullable<ReturnType<typeof getLoaderEntry>>): Promise<T> {
-  const blob = await (entry.loader.resolve ?? defaultResolve)(path)
-  return entry.loader.parse(blob, path, ctx) as Promise<T>
+async function loadAssetUncached<T>(
+  path: string,
+  ctx: LoaderContext,
+  entry: NonNullable<ReturnType<typeof getLoaderEntry>>,
+): Promise<T> {
+  const blob = await (entry.loader.resolve ?? defaultResolve)(path);
+  return entry.loader.parse(blob, path, ctx) as Promise<T>;
 }
 
 /**
@@ -45,46 +49,54 @@ async function loadAssetUncached<T>(path: string, ctx: LoaderContext, entry: Non
  * @returns The parsed asset, typed by the caller (loaders are untyped internally — see the `T` wrappers below for the typed surface).
  * @throws If no loader is registered for `filename`'s extension.
  */
-export function loadAsset<T>(filename: string, ctx: LoaderContext = {}, namespace: AssetNamespace = 'game'): Promise<T> {
-  const ext   = extensionOf(filename)
-  const entry = getLoaderEntry(ext)
-  if (!entry) throw new Error(`loadAsset: no loader registered for extension ".${ext}" (${filename})`)
+export function loadAsset<T>(
+  filename: string,
+  ctx: LoaderContext = {},
+  namespace: AssetNamespace = 'game',
+): Promise<T> {
+  const ext = extensionOf(filename);
+  const entry = getLoaderEntry(ext);
+  if (!entry)
+    throw new Error(`loadAsset: no loader registered for extension ".${ext}" (${filename})`);
 
-  const path = normalizePath(assetPath(namespace, entry.type, filename))
-  const cached = inFlight.get(path)
+  const path = normalizePath(assetPath(namespace, entry.type, filename));
+  const cached = inFlight.get(path);
   if (cached) {
-    console.debug(`[loadAsset] cache hit: ${path}`)
-    return cached as Promise<T>
+    console.debug(`[loadAsset] cache hit: ${path}`);
+    return cached as Promise<T>;
   }
-  console.debug(`[loadAsset] cache miss: ${path}`)
-  const promise = loadAssetUncached<T>(path, ctx, entry).catch(err => { inFlight.delete(path); throw err })
-  inFlight.set(path, promise)
-  return promise
+  console.debug(`[loadAsset] cache miss: ${path}`);
+  const promise = loadAssetUncached<T>(path, ctx, entry).catch((err) => {
+    inFlight.delete(path);
+    throw err;
+  });
+  inFlight.set(path, promise);
+  return promise;
 }
 
 /** Loads a glTF/GLB mesh — thin wrapper over {@link loadAsset} that makes `scene` mandatory at the type level. */
 export function loadMesh(filename: string, scene: Scene): Promise<{ meshes: AbstractMesh[] }> {
-  return loadAsset(filename, { scene })
+  return loadAsset(filename, { scene });
 }
 
 /** Loads a Babylon `Texture` — thin wrapper over {@link loadAsset} that makes `scene` mandatory at the type level. */
 export function loadTexture(filename: string, scene: Scene): Promise<Texture> {
-  return loadAsset(filename, { scene })
+  return loadAsset(filename, { scene });
 }
 
 /** Loads and decodes a font file into a ready `FontFace` — thin wrapper over {@link loadAsset}. */
 export function loadFont(filename: string): Promise<FontFace> {
-  return loadAsset(filename)
+  return loadAsset(filename);
 }
 
 /** Loads and decodes an audio file into an `AudioBuffer` — thin wrapper over {@link loadAsset}. */
 export function loadAudio(filename: string): Promise<AudioBuffer> {
-  return loadAsset(filename)
+  return loadAsset(filename);
 }
 
 /** Loads a baked animation file (`.anim` binary in prod, `.anim.json` in dev) — thin wrapper over {@link loadAsset}. */
 export function loadAnimation(filename: string): Promise<AnimationTrackSet> {
-  return loadAsset(filename)
+  return loadAsset(filename);
 }
 
 /**
@@ -96,7 +108,10 @@ export function loadAssets<T extends Record<string, string>>(
   filenames: T,
   scene?: Scene,
 ): Promise<{ [K in keyof T]: unknown }> {
-  const entries = Object.entries(filenames) as [keyof T, string][]
-  return Promise.all(entries.map(([key, filename]) => loadAsset(filename, { scene }).then(value => [key, value] as const)))
-    .then(results => Object.fromEntries(results) as { [K in keyof T]: unknown })
+  const entries = Object.entries(filenames) as [keyof T, string][];
+  return Promise.all(
+    entries.map(([key, filename]) =>
+      loadAsset(filename, { scene }).then((value) => [key, value] as const),
+    ),
+  ).then((results) => Object.fromEntries(results) as { [K in keyof T]: unknown });
 }

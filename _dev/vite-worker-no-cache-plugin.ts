@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite'
+import type { Plugin } from 'vite';
 
 /**
  * Safari (WebKit) ne réapplique pas les en-têtes Cross-Origin-Resource-Policy/COEP sur les
@@ -20,10 +20,10 @@ export default function workerNoCachePlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url && /\.worker\.[jt]s(\?|$)|worker_file/.test(req.url)) {
-          res.setHeader('Cache-Control', 'no-store')
+          res.setHeader('Cache-Control', 'no-store');
         }
-        next()
-      })
+        next();
+      });
     },
-  }
+  };
 }

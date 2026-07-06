@@ -7,6 +7,7 @@ jeu, un `controller` (phone) le pilote via WebRTC, et le jeu peut être "amené"
 device à l'autre (handoff bidirectionnel, autorité unique du game state).
 
 **Avant de commencer, lis dans l'ordre** :
+
 1. `/CLAUDE.md` — règles d'arbitrage non-négociables du projet.
 2. `/CLAUDE_backup.md` — détails additionnels (rendu single-canvas, playbook de validation).
 3. `docs/threading-model.md`, `docs/worker-adaptive-strategy.md`, `docs/system-allocator.md`,
@@ -16,7 +17,7 @@ device à l'autre (handoff bidirectionnel, autorité unique du game state).
 **Playbook obligatoire (CLAUDE.md §15) : pour chaque étape ci-dessous, commence par une
 critique d'architecture + alternatives + analyse thread-safety, attends la validation de
 l'utilisateur, PUIS implémente.** Ne saute pas cette étape même si le brief te semble déjà
-précis — le brief cadre le *quoi*, pas les détails d'implémentation, qui restent à ta charge
+précis — le brief cadre le _quoi_, pas les détails d'implémentation, qui restent à ta charge
 et à valider.
 
 ---
@@ -38,30 +39,30 @@ du projet fonctionnent ensemble.
 
 ## 2. État existant du repo — à réutiliser, ne pas recréer
 
-| Brique | Fichier(s) | État |
-|---|---|---|
-| Render worker + Comlink | `src/render/render.worker.ts`, `src/render/RenderManager.ts` | Fonctionnel |
-| Orchestration boot | `src/app/AppHost.ts`, `src/app/AppOrchestrator.ts` (xstate) | Fonctionnel |
-| Allocation adaptative (règle N-1) | `src/core/SystemAllocator.ts` | Fonctionnel, mais seulement câblé à `AssetsManager` |
-| Détection de rôle device | `src/app/ContextManager.ts` (`detectAppContext()`) | Fonctionnel (UA/touch/localStorage), pas de override query-param |
-| Cache assets SW + IndexedDB | `src/app/platform/serviceWorker.ts`, `serviceWorkerRegister.ts`, `assetCacheFetch.ts`, `src/core/assetDb.ts`, `src/core/AssetsManager.ts` | Fonctionnel — manifeste diffé par hash, `public/assets.json` déjà généré |
-| Layout SAB | `src/core/sab-manager.ts`, `src/shared/constants.ts` (`SAB_BOID_STRIDE`, `SAB_SECTION.{MATRICES,STATES,AUDIO}`) | Défini, **non câblé** dans les workers |
-| Constantes boids | `src/shared/config.ts` (`BOID_COUNT`, vitesses, séparation/alignement/cohésion) | Définies, à ajuster pour 10-30 boids |
-| Mode dev mono-thread | `src/_dev/inspectors/monolith.ts`, activé via `?monolith` dans `src/main.ts` | Fonctionnel |
+| Brique                            | Fichier(s)                                                                                                                                | État                                                                     |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Render worker + Comlink           | `src/render/render.worker.ts`, `src/render/RenderManager.ts`                                                                              | Fonctionnel                                                              |
+| Orchestration boot                | `src/app/AppHost.ts`, `src/app/AppOrchestrator.ts` (xstate)                                                                               | Fonctionnel                                                              |
+| Allocation adaptative (règle N-1) | `src/core/SystemAllocator.ts`                                                                                                             | Fonctionnel, mais seulement câblé à `AssetsManager`                      |
+| Détection de rôle device          | `src/app/ContextManager.ts` (`detectAppContext()`)                                                                                        | Fonctionnel (UA/touch/localStorage), pas de override query-param         |
+| Cache assets SW + IndexedDB       | `src/app/platform/serviceWorker.ts`, `serviceWorkerRegister.ts`, `assetCacheFetch.ts`, `src/core/assetDb.ts`, `src/core/AssetsManager.ts` | Fonctionnel — manifeste diffé par hash, `public/assets.json` déjà généré |
+| Layout SAB                        | `src/core/sab-manager.ts`, `src/shared/constants.ts` (`SAB_BOID_STRIDE`, `SAB_SECTION.{MATRICES,STATES,AUDIO}`)                           | Défini, **non câblé** dans les workers                                   |
+| Constantes boids                  | `src/shared/config.ts` (`BOID_COUNT`, vitesses, séparation/alignement/cohésion)                                                           | Définies, à ajuster pour 10-30 boids                                     |
+| Mode dev mono-thread              | `src/_dev/inspectors/monolith.ts`, activé via `?monolith` dans `src/main.ts`                                                              | Fonctionnel                                                              |
 
 **À construire — actuellement vide, stub, ou absent :**
 
-| Brique | Fichier(s) | État |
-|---|---|---|
-| Pairing WebRTC/Trystero | `src/input/signaling/` | Dossier vide ; dépendance `@trystero-p2p/mqtt` installée mais inutilisée |
-| Protocole de connexion | — | Aucun code |
-| Simulation worker | `src/sim/simulation.worker.ts` (renommé depuis `simulation/`) | Stub `console.log` |
-| Audio worker | `src/audio/audio.worker.ts` | Stub `console.log` |
-| Boids | `src/sim/BoidSimulation.ts`, `spatialPartitioning.ts` | Fichiers vides |
-| Physique | `src/sim/PhysicsEngine.ts` | Fichier vide ; `@babylonjs/havok` absent de `package.json` |
-| Rendu boids | `src/render/scene/BoidsRenderer.ts` | Stub commentaire seulement (thin instances depuis SAB) |
-| Routing query params | `src/main.ts` | Seul `?monolith` existe ; `?controller`/`?receiver`/`?dev` absents |
-| Micro-benchmark boot | — | Seule une heuristique statique `hardwareConcurrency` existe (`SystemAllocator.ts`) |
+| Brique                  | Fichier(s)                                                    | État                                                                               |
+| ----------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Pairing WebRTC/Trystero | `src/input/signaling/`                                        | Dossier vide ; dépendance `@trystero-p2p/mqtt` installée mais inutilisée           |
+| Protocole de connexion  | —                                                             | Aucun code                                                                         |
+| Simulation worker       | `src/sim/simulation.worker.ts` (renommé depuis `simulation/`) | Stub `console.log`                                                                 |
+| Audio worker            | `src/audio/audio.worker.ts`                                   | Stub `console.log`                                                                 |
+| Boids                   | `src/sim/BoidSimulation.ts`, `spatialPartitioning.ts`         | Fichiers vides                                                                     |
+| Physique                | `src/sim/PhysicsEngine.ts`                                    | Fichier vide ; `@babylonjs/havok` absent de `package.json`                         |
+| Rendu boids             | `src/render/scene/BoidsRenderer.ts`                           | Stub commentaire seulement (thin instances depuis SAB)                             |
+| Routing query params    | `src/main.ts`                                                 | Seul `?monolith` existe ; `?controller`/`?receiver`/`?dev` absents                 |
+| Micro-benchmark boot    | —                                                             | Seule une heuristique statique `hardwareConcurrency` existe (`SystemAllocator.ts`) |
 
 **Note de structure de dossiers** : le repo utilise `src/app`, `src/core`, `src/render`,
 `src/audio`, `src/shared`, `src/input`, `src/ui` comme noms réels. **Renomme
@@ -91,7 +92,7 @@ ou `src/system/` parallèles même si un ancien CLAUDE.md les mentionne : ce son
 - **Conventions de code** (`docs/code-conventions.md`, déjà en vigueur — respecte-les
   telles quelles) : PascalCase classes, camelCase fonctions/variables/fichiers utilitaires,
   suffixe `.worker.ts`, `SCREAMING_SNAKE_CASE` constantes, pas de classes utilitaires
-  statiques (module ES6 à la place), commentaires uniquement sur le *pourquoi*.
+  statiques (module ES6 à la place), commentaires uniquement sur le _pourquoi_.
 - **En plus des conventions ci-dessus, applique le style Babylon.js** (le codebase est
   Babylon-first, ces règles s'ajoutent sans contredire `code-conventions.md`) :
   - Pas de préfixe `I` sur les interfaces (`PeerConnection`, pas `IPeerConnection`).
@@ -143,6 +144,7 @@ validé le pattern de pairing suivant, à porter dans `src/input/signaling/` :
   le seul scénario à gérer dans cette démo.
 
 **Explicitement hors scope pour cette démo** (à ne pas implémenter) :
+
 - Configuration TURN server.
 - ICE restart automatique en cas de coupure réseau.
 - Fallback QR code (signaling sans internet).
@@ -243,21 +245,25 @@ reste à faire) puis **attendre un go explicite de l'utilisateur** avant de cont
 conforme au playbook CLAUDE.md §15.
 
 **Étape 0 — Outillage qualité** (préalable, avant tout code fonctionnel)
+
 - Configurer ESLint + Prettier alignés sur les conventions de la section 3 (actuellement
   absents du repo).
 - Vérification : le lint/format tourne sans erreur sur le code existant.
 
 **Étape 1 — Routing & rôles**
+
 - Ajouter `?controller` / `?receiver` / `?dev` dans `src/main.ts` (seul `?monolith`
   existe).
 - Vérification : chaque query param affiche le bon mode/écran isolément.
 
 **Étape 2 — Pairing WebRTC (scénario 1 uniquement)**
+
 - Porter le flow de la section 5 dans `src/input/signaling/`.
 - Vérification : deux devices sur le même réseau se découvrent et atteignent l'état
   "paired".
 
 **Étape 3 — Boids + Havok en local (sans réseau)**
+
 - Implémenter `BoidSimulation.ts`, `PhysicsEngine.ts`, `spatialPartitioning.ts` ; ajouter
   `@babylonjs/havok` ; construire la scène thématique avec 10-30 boids + objets
   poussables plus lourds.
@@ -267,6 +273,7 @@ conforme au playbook CLAUDE.md §15.
   crédible.
 
 **Étape 4 — Répartition multithread + SAB**
+
 - Câbler réellement `src/core/sab-manager.ts` / `src/shared/constants.ts` entre
   `src/sim/simulation.worker.ts` et `render.worker.ts`.
 - Implémenter l'heuristique adaptative + micro-benchmark boot + `?forceTier=low` (section
@@ -275,17 +282,20 @@ conforme au playbook CLAUDE.md §15.
   nominal utilise les workers dédiés.
 
 **Étape 5 — Input controller → sim via WebRTC**
+
 - Les joysticks (moyennés) du controller pairé pilotent la sphère invisible côté
   receiver, via le pairing de l'étape 2 et le pipeline input de CLAUDE.md §7.
 - Vérification : bouger les joysticks sur le controller déplace la sphère/boids sur le
   receiver en temps réel.
 
 **Étape 6 — Handoff bidirectionnel**
+
 - Implémenter le protocole de la section 6, adapté à l'état boids+Havok+SAB.
 - Vérification : transfert controller↔receiver sans réinit WebGL, sans saut visuel, état
   physique cohérent après transfert.
 
 **Étape 7 — Asset caching réel + DX finale**
+
 - Exercer réellement le pipeline SW+IndexedDB avec les assets de la scène (section 8).
 - Implémenter `initDevMode()` (section 8).
 - Vérification : cache hit instantané au reload, HMR fonctionnel malgré les workers.

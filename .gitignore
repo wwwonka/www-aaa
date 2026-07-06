@@ -31,3 +31,6 @@ Icon?
 
 # Google Drive
 .tmp.driveupload
+.mcp.json
+.agentsroom/handoff-transcript-*.txt
+.agentsroom/handoff-summary-*.md

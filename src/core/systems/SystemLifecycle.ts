@@ -8,7 +8,7 @@
  */
 export interface SystemLifecycle {
   /** Démarre le système (ex: warm-up des assets). Appelé par AppOrchestrator, jamais par le host. */
-  startUp(): Promise<void>
+  startUp(): Promise<void>;
   /** Libère les ressources tenues par le système (connexions, timers). No-op si rien à libérer. */
-  shutDown(): Promise<void>
+  shutDown(): Promise<void>;
 }

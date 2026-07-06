@@ -35,6 +35,7 @@ Worker (OffscreenCanvas)
 **Symptôme** : PixiJS rend correctement sur frame 1 uniquement. À partir de frame 2, son draw call ne produit aucun pixel visible.
 
 **Diagnostic par GL spy** :
+
 - Frame 1 : `attrib[0..3]: enabled=true` → rect rouge visible ✓
 - Frame 2 : `attrib[0..3]: enabled=false` → draw call silencieux ✗
 
@@ -53,6 +54,7 @@ Pendant le premier rendu PixiJS, le VAO vient d'être créé (attributs activés
 ### Pourquoi c'est difficile à diagnostiquer
 
 Tous ces éléments sont corrects sur frame 2 :
+
 - Uniforms GPU : `uWorldColorAlpha=[1,1,1,1]` ✓
 - Projection matrix ✓
 - Blend state : ONE, ONE_MINUS_SRC_ALPHA ✓
@@ -70,11 +72,11 @@ Seul le **vertex attrib enabled state** stocké dans le VAO est corrompu.
 Appeler `gl.bindVertexArray(null)` **après** le rendu PixiJS, avant que Babylon reprenne la main :
 
 ```typescript
-renderer.render({ container: stage, clear: false })
+renderer.render({ container: stage, clear: false });
 
 // Délie le VAO PixiJS — empêche Babylon de corrompre ses vertex attrib enables
 // via wipeCaches(true) ou son propre rendu pendant que ce VAO est encore bindé.
-gl.bindVertexArray(null)
+gl.bindVertexArray(null);
 ```
 
 ---
@@ -107,12 +109,12 @@ render(gl: WebGL2RenderingContext, w: number, h: number) {
 
 ## Ce qui a été tenté (et pourquoi ça ne suffisait pas seul)
 
-| Tentative | Résultat |
-|-----------|----------|
-| `resetState()` per-system sans `bindVertexArray(null)` post-rendu | Attributs désactivés par Babylon, draw silencieux |
-| Reset GPU complet sans `bindVertexArray(null)` post-rendu | Idem |
-| `renderer.resetState()` officiel | Idem — ne protège pas contre la corruption post-rendu |
-| Deux canvas séparés | Rejeté (contrainte architecture) |
+| Tentative                                                         | Résultat                                              |
+| ----------------------------------------------------------------- | ----------------------------------------------------- |
+| `resetState()` per-system sans `bindVertexArray(null)` post-rendu | Attributs désactivés par Babylon, draw silencieux     |
+| Reset GPU complet sans `bindVertexArray(null)` post-rendu         | Idem                                                  |
+| `renderer.resetState()` officiel                                  | Idem — ne protège pas contre la corruption post-rendu |
+| Deux canvas séparés                                               | Rejeté (contrainte architecture)                      |
 
 ---
 

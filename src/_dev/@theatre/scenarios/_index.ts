@@ -1,4 +1,4 @@
-import { titleScreenScenario } from './TitleScreen.dev'
+import { titleScreenScenario } from './TitleScreen.dev';
 
 /** One entry per animated screen — add here, not by wiring a new Comlink method. */
-export const scenarios = [titleScreenScenario]
+export const scenarios = [titleScreenScenario];

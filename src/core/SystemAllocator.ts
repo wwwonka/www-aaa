@@ -1,10 +1,10 @@
 /** `'worker'` — héberger dans un `SystemHost.worker.ts` dédié. `'inline'` — appeler la factory directement sur le main thread (coût nul, les factories sont portables). */
-export type AllocationMode = 'worker' | 'inline'
+export type AllocationMode = 'worker' | 'inline';
 
 /** Résultat de {@link allocateSystems} : où faire tourner les systèmes agiles demandés, et lesquels. */
 export interface SystemAllocation<T extends string> {
-  mode: AllocationMode
-  systems: T[]
+  mode: AllocationMode;
+  systems: T[];
 }
 
 /**
@@ -27,10 +27,10 @@ export function allocateSystems<T extends string>(
   hardwareConcurrency: number,
   agileSystems: T[],
 ): SystemAllocation<T> {
-  const availableSlots = Math.max(1, hardwareConcurrency - 1)
-  const remainingAfterRenderAnchor = availableSlots - 1
+  const availableSlots = Math.max(1, hardwareConcurrency - 1);
+  const remainingAfterRenderAnchor = availableSlots - 1;
   return {
     mode: remainingAfterRenderAnchor >= 1 ? 'worker' : 'inline',
     systems: agileSystems,
-  }
+  };
 }

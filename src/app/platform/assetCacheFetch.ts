@@ -1,10 +1,10 @@
 /// <reference lib="webworker" />
-import { openAssetDb, getAsset } from '../../core/assetDb'
-import { assetPath }             from '../../core/assetPath'
-import type { AssetManifest, AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin'
+import { openAssetDb, getAsset } from '../../core/assetDb';
+import { assetPath } from '../../core/assetPath';
+import type { AssetManifest } from '../../../_dev/vite-asset-manifest-plugin';
 
-let knownPaths: Set<string> = new Set()
-let dbPromise: Promise<IDBDatabase> | undefined
+let knownPaths: Set<string> = new Set();
+let dbPromise: Promise<IDBDatabase> | undefined;
 
 /**
  * Loads the build manifest into memory so {@link handleAssetFetch} can decide synchronously
@@ -13,16 +13,16 @@ let dbPromise: Promise<IDBDatabase> | undefined
  */
 export async function loadAssetManifest(): Promise<void> {
   try {
-    const manifest: AssetManifest = await fetch('/assets.json').then(r => r.json())
+    const manifest = (await fetch('/assets.json').then((r) => r.json())) as AssetManifest;
     knownPaths = new Set(
       Object.entries(manifest).flatMap(([namespace, types]) =>
         Object.entries(types).flatMap(([type, files]) =>
-          Object.keys(files).map(filename => assetPath(namespace as AssetNamespace, type, filename)),
+          Object.keys(files).map((filename) => assetPath(namespace, type, filename)),
         ),
       ),
-    )
+    );
   } catch {
-    knownPaths = new Set()
+    knownPaths = new Set();
   }
 }
 
@@ -33,16 +33,16 @@ export async function loadAssetManifest(): Promise<void> {
  * manifest falls through untouched.
  */
 export function handleAssetFetch(event: FetchEvent): boolean {
-  const path = new URL(event.request.url).pathname.replace(/^\//, '')
-  if (!knownPaths.has(path)) return false
+  const path = new URL(event.request.url).pathname.replace(/^\//, '');
+  if (!knownPaths.has(path)) return false;
 
-  dbPromise ??= openAssetDb()
+  dbPromise ??= openAssetDb();
 
   event.respondWith(
     dbPromise
-      .then(db => getAsset(db, path))
-      .then(cached => cached ? new Response(cached.blob) : fetch(event.request))
+      .then((db) => getAsset(db, path))
+      .then((cached) => (cached ? new Response(cached.blob) : fetch(event.request)))
       .catch(() => fetch(event.request)),
-  )
-  return true
+  );
+  return true;
 }

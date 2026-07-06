@@ -15,6 +15,7 @@ shell (JS/CSS du bundle, via Workbox) est explicitement hors scope, à traiter s
 ## Convention de dossiers — `public/app/` et `public/game/`
 
 Les deux seuls namespaces valides à la racine de `public/` :
+
 - **`app/`** — Shell/menu : favicon, icônes PWA, splash screens iOS, `app.webmanifest`
 - **`game/`** — Contenu de simulation : `font/`, `model/`, à terme `texture/`, `audio/`
 
@@ -40,17 +41,19 @@ public/
 ## `assets.json` — manifest imbriqué
 
 Généré par `_dev/vite-asset-manifest-plugin.ts`, reproduit l'arborescence physique :
+
 ```json
 {
   "app": {
     "icons": { "favicon.svg": { "hash": "61bc9a16...", "size": 9522 } },
-    "misc":  { "app.webmanifest": { "hash": "7209fb55...", "size": 1479 } }
+    "misc": { "app.webmanifest": { "hash": "7209fb55...", "size": 1479 } }
   },
   "game": {
     "font": { "fezbox.otf": { "hash": "40841915...", "size": 10316 } }
   }
 }
 ```
+
 - `namespace`/`type` ne sont **jamais répétés en valeur** — ce sont les clés de premier/deuxième niveau.
 - `hash` = sha256 tronqué à 16 caractères hex, sans préfixe `sha256:` (détection de changement, pas
   un usage cryptographique).
@@ -68,15 +71,17 @@ serve retombe sur le fallback SPA (`index.html`, mauvais content-type, 404 dégu
 
 `src/core/assetPath.ts` reconstruit le chemin réel (réseau + clé IDB) depuis `(namespace, type,
 filename)` :
+
 ```ts
 function assetPath(namespace, type, filename) {
-  return type === 'misc' ? `${namespace}/${filename}` : `${namespace}/${type}/${filename}`
+  return type === 'misc' ? `${namespace}/${filename}` : `${namespace}/${type}/${filename}`;
 }
 ```
+
 **Ne jamais dupliquer cette logique.** Une version antérieure du code l'inlinait dans deux fichiers
 (`AssetsManager.ts` et le SW) ; le cas `misc` divergeait, ce qui faisait fetcher
 `/app/misc/app.webmanifest` (inexistant) au lieu de `/app/app.webmanifest` — 404 silencieux retombant
-sur le fallback SPA, qui se faisait cacher *à la place* du vrai manifest. Bug repéré uniquement en
+sur le fallback SPA, qui se faisait cacher _à la place_ du vrai manifest. Bug repéré uniquement en
 lisant les octets réels du Blob caché, pas par une erreur de type.
 
 ## IndexedDB — `AssetsDB`
@@ -104,13 +109,18 @@ AssetsDB (v3)
 ## `AssetsManager` — l'orchestrateur
 
 `src/core/AssetsManager.ts`, factory `createAssetsManager()` :
+
 ```ts
 interface AssetsManagerApi {
-  warmUp(namespace: AssetNamespace | undefined, onEvent: (event: AssetLoadEvent) => void): Promise<void>
-  readonly criticalReady: Promise<void>
-  persist(): Promise<boolean>
+  warmUp(
+    namespace: AssetNamespace | undefined,
+    onEvent: (event: AssetLoadEvent) => void,
+  ): Promise<void>;
+  readonly criticalReady: Promise<void>;
+  persist(): Promise<boolean>;
 }
 ```
+
 - `warmUp(namespace?, onEvent)` — `'app'`/`'game'` pour un chargement granulaire (menu d'abord, jeu
   ensuite), omis pour tout charger. Diffuse des events tagués (`start`/`progress`/`complete`/`error`).
   Diffe le manifest contre IDB par hash, télécharge seulement ce qui manque ou a changé.
@@ -126,6 +136,7 @@ interface AssetsManagerApi {
 `src/app/platform/assetCacheFetch.ts` (volontairement **pas** dans `src/app/platform/pwa/` —
 contrairement à `transparentFavicon.ts`, qui est un vrai hack Firefox-only, ceci est un comportement
 SW générique, pas spécifique PWA) :
+
 - `loadAssetManifest()` — au SW `activate`, charge `/assets.json`, aplatit en `Set<string>` de chemins
   réels via `assetPath()`. Décision synchrone, pas de round-trip IDB sur chaque `fetch`.
 - `handleAssetFetch(event)` — si le chemin de la requête est dans le `Set`, sert depuis IDB
@@ -149,7 +160,7 @@ direct à `createAssetsManager()` selon la décision de `SystemAllocator` (`docs
 — plus un `new Worker()` codé en dur systématique.
 
 **Pourquoi le worker reste préférable quand un slot est disponible** : `warmUp()` est
-fire-and-forget dans `AppHost.ts` (jamais `await`), donc il tournait *en même temps* que le
+fire-and-forget dans `AppHost.ts` (jamais `await`), donc il tournait _en même temps_ que le
 bootstrap du render worker (transfert OffscreenCanvas, handshake Comlink, compilation de shaders
 Babylon/PixiJS) — ses transactions IDB séquentielles et ses comparaisons de hash par asset
 consommaient des ticks JS sur le main thread exactement pendant la fenêtre la plus sensible en
@@ -166,7 +177,7 @@ frontière Comlink — Comlink awaite les valeurs thenable avant d'envoyer la r�
 `src/core/SystemHost.worker.ts` (générique, lazy `get(id)`) piloté par
 `src/core/SystemAllocator.ts`. AssetsManager tourne maintenant dans un worker dédié **ou** inline
 sur le main thread selon `navigator.hardwareConcurrency` et la règle N-1. Le warm-up off-main-thread
-décrit ci-dessous reste vrai quand le mode choisi est `'worker'` — seul le *comment* il y arrive a
+décrit ci-dessous reste vrai quand le mode choisi est `'worker'` — seul le _comment_ il y arrive a
 changé. Détail complet : `docs/system-allocator.md`.
 
 ## Renommages d'architecture associés (même session)
@@ -177,7 +188,7 @@ changé. Détail complet : `docs/system-allocator.md`.
   `RenderManager.ts`, `render.worker.ts`, outils `_dev/`).
 - `src/ui/ScreenManager.ts` — inchangé, rôle clarifié : régisseur visuel dans le render worker, réagit
   aux décisions de `AppOrchestrator`, ne les prend pas.
-- `GameStateBroadcaster` (futur, pas construit) — diffuseur de l'état de *simulation* (positions,
+- `GameStateBroadcaster` (futur, pas construit) — diffuseur de l'état de _simulation_ (positions,
   physique) à 60Hz depuis le `SharedArrayBuffer`, Observer pattern, double buffering. Renommé depuis
   `StateBroadcaster` pour ne pas se confondre avec l'état applicatif du Shell géré par
   `AppOrchestrator`. Travail séparé, pas encore planifié.
@@ -214,8 +225,8 @@ contrat mais vit hors de `src/render/assets/` — voir `docs/animation-pipeline.
 
 ```ts
 interface IResourceLoader<T> {
-  resolve?(path: string): Promise<Blob>              // défaut : fetch, voir defaultResolve
-  parse(blob: Blob, path: string, ctx: LoaderContext): Promise<T>
+  resolve?(path: string): Promise<Blob>; // défaut : fetch, voir defaultResolve
+  parse(blob: Blob, path: string, ctx: LoaderContext): Promise<T>;
 }
 ```
 

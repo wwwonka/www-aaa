@@ -165,24 +165,24 @@ sab-manager.ts alloue un seul SAB découpé en 3 zones :
 
 ## Ce qui est fonctionnel vs. à implémenter
 
-| Module | Statut |
-|--------|--------|
-| AppHost + OffscreenCanvas + Comlink | ✅ fonctionnel |
-| Event handlers (resize, visibility) | ✅ fonctionnel |
-| Render worker (Babylon + PixiJS partagé) | ✅ fonctionnel |
-| renderLoop (RAF + cap FPS + drift) | ✅ fonctionnel |
-| PixiGameUI (gameContainer + shellContainer) | ✅ fonctionnel |
-| shared/config + types + constants | ✅ fonctionnel |
-| sab-manager (allocation SAB) | ✅ structure prête |
-| CommandBuffer (GameCommand) | ✅ structure prête |
-| AppOrchestrator (ex-AppStateMachine) | ✅ fonctionnel |
-| AssetsManager + IndexedDB + SW double-cache | ✅ fonctionnel — voir docs/assets-manager.md |
-| Simulation worker | 🚧 stub |
-| Audio worker | 🚧 stub |
-| gameLoop | 🚧 stub |
-| InputProxy | 🚧 stub |
-| pixiShellUI | 🚧 stub |
-| ui/Button | 🚧 stub |
-| BoidSimulation / PhysicsEngine / spatialPartitioning | 🚧 stub |
-| AudioAggregator | 🚧 stub |
-| SAB câblé entre workers | ⏳ à faire |
+| Module                                               | Statut                                       |
+| ---------------------------------------------------- | -------------------------------------------- |
+| AppHost + OffscreenCanvas + Comlink                  | ✅ fonctionnel                               |
+| Event handlers (resize, visibility)                  | ✅ fonctionnel                               |
+| Render worker (Babylon + PixiJS partagé)             | ✅ fonctionnel                               |
+| renderLoop (RAF + cap FPS + drift)                   | ✅ fonctionnel                               |
+| PixiGameUI (gameContainer + shellContainer)          | ✅ fonctionnel                               |
+| shared/config + types + constants                    | ✅ fonctionnel                               |
+| sab-manager (allocation SAB)                         | ✅ structure prête                           |
+| CommandBuffer (GameCommand)                          | ✅ structure prête                           |
+| AppOrchestrator (ex-AppStateMachine)                 | ✅ fonctionnel                               |
+| AssetsManager + IndexedDB + SW double-cache          | ✅ fonctionnel — voir docs/assets-manager.md |
+| Simulation worker                                    | 🚧 stub                                      |
+| Audio worker                                         | 🚧 stub                                      |
+| gameLoop                                             | 🚧 stub                                      |
+| InputProxy                                           | 🚧 stub                                      |
+| pixiShellUI                                          | 🚧 stub                                      |
+| ui/Button                                            | 🚧 stub                                      |
+| BoidSimulation / PhysicsEngine / spatialPartitioning | 🚧 stub                                      |
+| AudioAggregator                                      | 🚧 stub                                      |
+| SAB câblé entre workers                              | ⏳ à faire                                   |

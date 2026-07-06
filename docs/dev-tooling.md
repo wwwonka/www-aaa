@@ -25,15 +25,19 @@ src/_dev/
 ## Modes de lancement
 
 ### Mode normal (worker)
+
 ```
 http://localhost:5173/
 ```
+
 Babylon + PixiJS dans le render worker (OffscreenCanvas). Raccourcis clavier actifs.
 
 ### Mode monolith
+
 ```
 http://localhost:5173/?monolith
 ```
+
 Tout tourne sur le main thread. Donne accès au DOM → **Babylon Inspector s'ouvre automatiquement**.
 Même `RenderManager`, zéro divergence de logique. Utilisé pour inspecter la scène, débugger les matériaux, sélectionner des meshes.
 
@@ -41,14 +45,14 @@ Même `RenderManager`, zéro divergence de logique. Utilisé pour inspecter la s
 
 ## Raccourcis clavier (dev uniquement)
 
-| Raccourci | Effet |
-|---|---|
-| `Ctrl+D` | Toggle overlay FPS / frame time |
-| `Ctrl+W` | Toggle wireframe |
-| `Ctrl+B` | Toggle bounding boxes |
-| `Ctrl+S` | Dump stats scène dans la console |
-| `Space`  | Force l'état IN_GAME (simule controller connecté) |
-| `Enter`  | Toggle pause / resume |
+| Raccourci | Effet                                             |
+| --------- | ------------------------------------------------- |
+| `Ctrl+D`  | Toggle overlay FPS / frame time                   |
+| `Ctrl+W`  | Toggle wireframe                                  |
+| `Ctrl+B`  | Toggle bounding boxes                             |
+| `Ctrl+S`  | Dump stats scène dans la console                  |
+| `Space`   | Force l'état IN_GAME (simule controller connecté) |
+| `Enter`   | Toggle pause / resume                             |
 
 ---
 
@@ -56,11 +60,11 @@ Même `RenderManager`, zéro divergence de logique. Utilisé pour inspecter la s
 
 Saute directement à un état sans passer par les menus. Utile pour itérer sur un écran précis.
 
-| Query string | Effet |
-|---|---|
-| `?state=IN_GAME` | Démarre directement en jeu |
+| Query string     | Effet                                             |
+| ---------------- | ------------------------------------------------- |
+| `?state=IN_GAME` | Démarre directement en jeu                        |
 | `?state=PAUSED`  | Démarre en pause (pour débugger l'écran de pause) |
-| `?monolith`      | Mode monolith + Babylon Inspector |
+| `?monolith`      | Mode monolith + Babylon Inspector                 |
 
 Les paramètres se combinent : `?monolith&state=IN_GAME` lance le monolith directement en jeu.
 
@@ -77,16 +81,20 @@ Les paramètres se combinent : `?monolith&state=IN_GAME` lance le monolith direc
 ## Roadmap
 
 ### `scenarios/` — Mocks réseau (quand WebRTC arrive)
+
 - `offline-mock.ts` — Simule `navigator.onLine = false`
 - `turn-relay-mock.ts` — Force le passage par un serveur TURN
 - `input-emulator.ts` — Simule des inputs WebRTC sans téléphone
 
 ### `overlay/` — Graphes défilants (quand la simulation boids existe)
+
 - Graphique scrollant de vélocité / énergie par boid (inspiré de Mick West)
 - Visualisation des vecteurs de force dans l'espace 3D via Babylon debug drawing
 
 ### `tools/sab-viewer.ts` — Quand le SharedArrayBuffer est peuplé
+
 - Lecture et affichage brut des sections MATRICES / STATES / AUDIO du SAB
 
 ### HMR + SAB "zero reload"
+
 L'architecture est déjà prête : l'état des boids réside dans le SharedArrayBuffer, qui survit au remplacement de code par Vite HMR. Le nouveau worker se reconnecte au SAB existant sans réinitialiser la simulation — et sans perdre l'appairage WebRTC.

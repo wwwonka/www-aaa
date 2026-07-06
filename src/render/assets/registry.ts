@@ -1,12 +1,12 @@
-import type { IResourceLoader } from './types'
+import type { ResourceLoader } from './types';
 
 interface RegistryEntry<T> {
-  loader: IResourceLoader<T>
+  loader: ResourceLoader<T>;
   /** Folder name under `public/<namespace>/` this asset type lives in — e.g. `'font'`, `'mesh'`. */
-  type: string
+  type: string;
 }
 
-const registry = new Map<string, RegistryEntry<unknown>>()
+const registry = new Map<string, RegistryEntry<unknown>>();
 
 /**
  * Registers `loader` for one or more file extensions (without the leading dot, e.g. `'glb'`),
@@ -20,8 +20,12 @@ const registry = new Map<string, RegistryEntry<unknown>>()
  * @param type - Folder name under `public/<namespace>/` this asset type lives in (e.g. `'mesh'`).
  * @param loader - The loader implementation to register.
  */
-export function registerLoader(extensions: string[], type: string, loader: IResourceLoader<unknown>): void {
-  for (const ext of extensions) registry.set(ext, { loader, type })
+export function registerLoader(
+  extensions: string[],
+  type: string,
+  loader: ResourceLoader<unknown>,
+): void {
+  for (const ext of extensions) registry.set(ext, { loader, type });
 }
 
 /**
@@ -30,11 +34,11 @@ export function registerLoader(extensions: string[], type: string, loader: IReso
  * @returns The matching `{ loader, type }` entry, or `undefined` if none was registered.
  */
 export function getLoaderEntry(ext: string): RegistryEntry<unknown> | undefined {
-  return registry.get(ext)
+  return registry.get(ext);
 }
 
 /**
- * Default {@link IResourceLoader.resolve} strategy: `fetch('/' + path)` → `Blob`. Relies entirely
+ * Default {@link ResourceLoader.resolve} strategy: `fetch('/' + path)` → `Blob`. Relies entirely
  * on the Service Worker (`src/app/platform/assetCacheFetch.ts`) to serve cached bytes from
  * IndexedDB transparently — never reads `assetDb.ts`/IndexedDB directly here, to keep a single
  * source of truth for "is this asset cached".
@@ -43,7 +47,7 @@ export function getLoaderEntry(ext: string): RegistryEntry<unknown> | undefined 
  * @throws If the fetch response is not `ok`.
  */
 export const defaultResolve = async (path: string): Promise<Blob> => {
-  const response = await fetch('/' + path)
-  if (!response.ok) throw new Error(`loadAsset: fetch failed for "${path}" (${response.status})`)
-  return response.blob()
-}
+  const response = await fetch('/' + path);
+  if (!response.ok) throw new Error(`loadAsset: fetch failed for "${path}" (${response.status})`);
+  return response.blob();
+};

@@ -1,14 +1,14 @@
-import { appOrchestrator } from '../core/AppOrchestrator'
-import type { AssetsManagerApi } from '../core/AssetsManager'
-import type { RenderWorkerApi } from '../render/render.worker'
-import { setupDevKeyboardShortcuts } from './DevKeyboardShortcutListener'
+import { appOrchestrator } from '../core/AppOrchestrator';
+import type { AssetsManagerApi } from '../core/AssetsManager';
+import type { RenderWorkerApi } from '../render/render.worker';
+import { setupDevKeyboardShortcuts } from './DevKeyboardShortcutListener';
 
-let authoringEnabled = false
+let authoringEnabled = false;
 // `setupTheatreBridge` calls `sheet.object(id, config)` per scenario object — Theatre.js throws if
 // that's called twice with a different (even if numerically identical) config object, since it
 // can't tell that wasn't an intentional reconfiguration. So the bridge is wired up exactly once,
 // ever — re-enabling authoring after a hide just restores the Studio UI, it never re-registers.
-let bridgeInitialized = false
+let bridgeInitialized = false;
 
 /**
  * Toggles Theatre.js authoring mode on 'T'. `@theatre/studio` is only ever imported here, inside
@@ -19,33 +19,38 @@ let bridgeInitialized = false
  */
 export async function toggleAuthoringMode(renderApi: RenderWorkerApi): Promise<void> {
   if (!authoringEnabled) {
-    authoringEnabled = true
-    await renderApi.pauseAnimationPlayback()
+    authoringEnabled = true;
+    renderApi.pauseAnimationPlayback();
     if (!bridgeInitialized) {
-      bridgeInitialized = true
-      const { setupTheatreBridge } = await import('./@theatre/bridge')
-      setupTheatreBridge(appOrchestrator, (id, value) => renderApi.applyExternalValue(id, value))
+      bridgeInitialized = true;
+      const { setupTheatreBridge } = await import('./@theatre/bridge');
+      setupTheatreBridge(appOrchestrator, (id, value) => renderApi.applyExternalValue(id, value));
     } else {
-      const { restoreStudio } = await import('./@theatre/studio')
-      restoreStudio()
+      const { restoreStudio } = await import('./@theatre/studio');
+      restoreStudio();
     }
   } else {
-    authoringEnabled = false
-    const { hideStudio } = await import('./@theatre/studio')
-    hideStudio()
-    await renderApi.resumeAnimationPlayback()
+    authoringEnabled = false;
+    const { hideStudio } = await import('./@theatre/studio');
+    hideStudio();
+    renderApi.resumeAnimationPlayback();
   }
 }
 
 /** DEV-only entry point — call once from `main.ts` behind `import.meta.env.DEV`. Wires the 'T'/Cmd+S shortcuts; never imports `@theatre/studio` itself (see {@link toggleAuthoringMode}). */
-export function initDev(deps: { assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }): void {
+export function initDev(deps: {
+  assetsManager: AssetsManagerApi;
+  renderApi: RenderWorkerApi;
+}): void {
   setupDevKeyboardShortcuts({
-    assetsManager:  deps.assetsManager,
-    onAuthoringKey: () => toggleAuthoringMode(deps.renderApi),
+    assetsManager: deps.assetsManager,
+    onAuthoringKey: () => {
+      void toggleAuthoringMode(deps.renderApi);
+    },
     onSaveKey: () => {
       // Rien à exporter si Studio n'est même pas ouvert.
-      if (!authoringEnabled) return
-      import('./@theatre/export').then(({ exportScenarios }) => exportScenarios())
+      if (!authoringEnabled) return;
+      void import('./@theatre/export').then(({ exportScenarios }) => exportScenarios());
     },
-  })
+  });
 }

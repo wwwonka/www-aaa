@@ -1,10 +1,10 @@
-import type { Container } from 'pixi.js'
-import type { AppState }  from '../core/AppOrchestrator'
-import type { UIScreen }  from './UIScreen'
+import type { Container } from 'pixi.js';
+import type { AppState } from '../core/AppOrchestrator';
+import type { UIScreen } from './UIScreen';
 
 interface ScreenEntry {
-  readonly screen: UIScreen
-  readonly layer:  Container
+  readonly screen: UIScreen;
+  readonly layer: Container;
 }
 
 /**
@@ -15,15 +15,15 @@ interface ScreenEntry {
  * without any `addChild`/`removeChild` churn.
  */
 export class ScreenManager {
-  private readonly _map:     Map<AppState, ScreenEntry> = new Map()
-  private          _current: AppState | null = null
+  private readonly _map: Map<AppState, ScreenEntry> = new Map();
+  private _current: AppState | null = null;
 
-  private readonly _gameUI:    Container
-  private readonly _overlayUI: Container
+  private readonly _gameUI: Container;
+  private readonly _overlayUI: Container;
 
   constructor(gameUI: Container, overlayUI: Container) {
-    this._gameUI    = gameUI
-    this._overlayUI = overlayUI
+    this._gameUI = gameUI;
+    this._overlayUI = overlayUI;
   }
 
   /**
@@ -34,9 +34,9 @@ export class ScreenManager {
    * @param screen - The screen instance to register.
    */
   register(state: AppState, screen: UIScreen): void {
-    const layer = screen.layer === 'gameUI' ? this._gameUI : this._overlayUI
-    layer.addChild(screen.node)
-    this._map.set(state, { screen, layer })
+    const layer = screen.layer === 'gameUI' ? this._gameUI : this._overlayUI;
+    layer.addChild(screen.node);
+    this._map.set(state, { screen, layer });
   }
 
   /**
@@ -47,10 +47,10 @@ export class ScreenManager {
    */
   transition(to: AppState): void {
     if (this._current !== null) {
-      this._map.get(this._current)?.screen.onLeave()
+      this._map.get(this._current)?.screen.onLeave();
     }
-    this._map.get(to)?.screen.onEnter()
-    this._current = to
+    this._map.get(to)?.screen.onEnter();
+    this._current = to;
   }
 
   /**
@@ -59,7 +59,7 @@ export class ScreenManager {
    * real transition and without the caller needing to know any animation id.
    */
   replayCurrentReveal(): void {
-    if (this._current !== null) this._map.get(this._current)?.screen.onEnter()
+    if (this._current !== null) this._map.get(this._current)?.screen.onEnter();
   }
 
   /**
@@ -68,7 +68,7 @@ export class ScreenManager {
    * @param delta - Elapsed time since the last frame, in milliseconds.
    */
   update(delta: number): void {
-    for (const { screen } of this._map.values()) screen.update(delta)
+    for (const { screen } of this._map.values()) screen.update(delta);
   }
 
   /**
@@ -78,6 +78,6 @@ export class ScreenManager {
    * @param height - New viewport height, in pixels.
    */
   resize(width: number, height: number): void {
-    for (const { screen } of this._map.values()) screen.resize(width, height)
+    for (const { screen } of this._map.values()) screen.resize(width, height);
   }
 }

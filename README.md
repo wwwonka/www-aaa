@@ -21,6 +21,7 @@ layer4 — notifications  ← toasts, toujours sharp, jamais filtré
 ## Architecture de l'application
 
 ### AppStateMachine (`src/core/AppStateMachine.ts`)
+
 XState v5. Tourne sur le **main thread**. États :
 
 ```
@@ -35,6 +36,7 @@ PLAYING_ON_PHONE  ──TRANSFER_BACK──►  IN_GAME
 `CONTROLLER_CONNECTED` / `CONTROLLER_DISCONNECTED` fonctionnent depuis n'importe quel état.
 
 ### Render Worker (`src/render/`)
+
 PixiJS et Babylon tournent dans un **render worker** (OffscreenCanvas). Le main thread communique via Comlink.
 
 - `RenderManager` — orchestre Babylon + PixiJS + effets
@@ -45,12 +47,12 @@ PixiJS et Babylon tournent dans un **render worker** (OffscreenCanvas). Le main 
 
 4 modes internes :
 
-| Mode | Babylon | Capture | Blur |
-|------|---------|---------|------|
-| `normal` | tourne | — | off |
-| `pausing` | tourne | readPixels once → sprite figé | monte ease-out 350ms |
-| `frozen` | stoppé | figé | stable |
-| `resuming` | tourne | readPixels chaque frame → sprite live | descend ease-in 350ms |
+| Mode       | Babylon | Capture                               | Blur                  |
+| ---------- | ------- | ------------------------------------- | --------------------- |
+| `normal`   | tourne  | —                                     | off                   |
+| `pausing`  | tourne  | readPixels once → sprite figé         | monte ease-out 350ms  |
+| `frozen`   | stoppé  | figé                                  | stable                |
+| `resuming` | tourne  | readPixels chaque frame → sprite live | descend ease-in 350ms |
 
 La capture utilise `gl.readPixels` → flip Y → `OffscreenCanvas` → `ImageBitmap` → `Texture.from()`. KawaseBlurFilter (pixi-filters, quality 4).
 
@@ -91,10 +93,10 @@ src/
 
 ## Raccourcis dev
 
-| Touche | Action |
-|--------|--------|
+| Touche  | Action                                       |
+| ------- | -------------------------------------------- |
 | `Space` | Force `IN_GAME` (simule contrôleur connecté) |
-| `Enter` | Toggle `PAUSE` / `RESUME` |
+| `Enter` | Toggle `PAUSE` / `RESUME`                    |
 
 ---
 

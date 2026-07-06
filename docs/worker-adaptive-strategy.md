@@ -14,7 +14,7 @@ hardwareConcurrency <= 4  →  2 workers max     (render + simulation ; audio in
 hardwareConcurrency > 4   →  3 workers dédiés  (architecture nominale)
 ```
 
-Note : `hardwareConcurrency` retourne des *logical cores* (avec hyperthreading), pas des
+Note : `hardwareConcurrency` retourne des _logical cores_ (avec hyperthreading), pas des
 performance cores. C'est un proxy imparfait — un Snapdragon 4 cœurs lents et un A-series
 6 cœurs efficaces peuvent déclarer le même nombre. Utile comme heuristique, pas comme garantie.
 
@@ -30,6 +30,7 @@ pour le Main Thread UI et les tâches système de l'OS.
 Sur appareils ≤ 2 cœurs, un seul worker exécute séquentiellement : simulation → render → audio.
 
 Points d'implémentation :
+
 - Pas de `requestAnimationFrame` dans un worker — utiliser `MessageChannel` ou `setTimeout`
 - Le SAB reste identique : les managers lisent/écrivent les mêmes buffers, dans le même thread
 - `OffscreenCanvas` doit être passé sans `transferControlToOffscreen` si le canvas reste sur
@@ -45,6 +46,7 @@ Points d'implémentation :
 ## Priorité d'implémentation
 
 Cette stratégie est secondaire par rapport à :
+
 1. Budget de frame explicite par worker (simulation ≤ X ms, render ≤ Y ms)
 2. LOD de simulation dynamique si le budget est dépassé
 

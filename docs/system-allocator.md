@@ -50,8 +50,8 @@ liste des systèmes) casserait cette analyse statique. Le `get(id)` lazy évite 
 problème : le même fichier worker, sans paramètres, peut héberger n'importe quelle combinaison de
 systèmes — la décision de qui demande quoi se fait au runtime, côté appelant.
 
-**Piège Comlink** : l'objet retourné par `get()` traverse la frontière comme *valeur de retour de
-RPC*, pas comme racine exposée. Sans l'envelopper dans `Comlink.proxy()`, ses méthodes async
+**Piège Comlink** : l'objet retourné par `get()` traverse la frontière comme _valeur de retour de
+RPC_, pas comme racine exposée. Sans l'envelopper dans `Comlink.proxy()`, ses méthodes async
 seraient perdues au structured clone au lieu de rester appelables à distance (les fonctions ne
 survivent pas à `postMessage` sans ce marquage).
 
@@ -59,12 +59,14 @@ survivent pas à `postMessage` sans ce marquage).
 
 Tout système hébergeable via `get(id)` doit implémenter `SystemLifecycle`
 (`src/core/systems/SystemLifecycle.ts`) :
+
 ```ts
 interface SystemLifecycle {
-  startUp(): Promise<void>
-  shutDown(): Promise<void>
+  startUp(): Promise<void>;
+  shutDown(): Promise<void>;
 }
 ```
+
 Le `SystemHost` ne fait qu'**instancier** physiquement (`get(id)` construit l'objet) — il ne
 décide jamais quand un système démarre logiquement. C'est `AppOrchestrator` qui appelle
 `startUp()`/`shutDown()` après avoir obtenu l'instance, pour garder le contrôle de l'ordre entre

@@ -9,6 +9,7 @@ pas encore standardisée (W3C proposal ouvert). Apple a annoncé un support part
 mais l'implémentation cross-browser est incomplète en 2026.
 
 Références :
+
 - https://github.com/w3c/webrtc-pc/issues/230
 - https://github.com/w3c/webrtc-extensions/issues/77
 

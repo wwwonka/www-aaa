@@ -4,22 +4,22 @@
 
 Tout ce qui a un état logique de jeu. Producteur du SAB.
 
-| Système | Raison |
-|---------|--------|
-| Havok + IA des boids | État physique, déterminisme |
-| Triggers et zones | Influencent le gameplay |
-| Objets destructibles | Changement d'état (santé, activation) |
-| Animations logiques | Position "maître" des objets sur courbe (les boids doivent les éviter) |
+| Système              | Raison                                                                 |
+| -------------------- | ---------------------------------------------------------------------- |
+| Havok + IA des boids | État physique, déterminisme                                            |
+| Triggers et zones    | Influencent le gameplay                                                |
+| Objets destructibles | Changement d'état (santé, activation)                                  |
+| Animations logiques  | Position "maître" des objets sur courbe (les boids doivent les éviter) |
 
 ## Render Worker — L'Illusion
 
 Consommateur pur du SAB. Aucun état de jeu.
 
-| Système | Raison |
-|---------|--------|
+| Système                | Raison                                                            |
+| ---------------------- | ----------------------------------------------------------------- |
 | Skybox / environnement | Pas d'interaction physique, libère des cycles CPU dans Simulation |
-| Particules cosmétiques | Étincelles, bulles — GPU uniquement, zéro collision |
-| Post-processing | Bloom, God Rays — aucun impact sur la simulation |
+| Particules cosmétiques | Étincelles, bulles — GPU uniquement, zéro collision               |
+| Post-processing        | Bloom, God Rays — aucun impact sur la simulation                  |
 
 ## ⚠️ Gotcha — Promotion d'objets
 
@@ -38,11 +38,13 @@ Toute classe métier (`WebRTCManager`, `SignalingTransport`, `AudioAggregator`, 
 Thread ou dans un Worker sans modification.
 
 **Interdit dans une classe métier :**
+
 - `window.*`, `document.*`, toute référence DOM
 - `self.postMessage` — réservé au fichier `.worker.ts`
 - `Atomics.wait()` — bloquant, interdit sur le Main Thread
 
 **Autorisé partout :**
+
 - `SharedArrayBuffer` + `Atomics.store/load/notify`
 - `WebSocket`, `fetch`
 - `Comlink.expose` / `Comlink.wrap` — dans le `.worker.ts` uniquement, pas dans la classe
@@ -53,6 +55,7 @@ aujourd'hui. Quand le support cross-browser arrivera, le déplacement dans un Wo
 changeant uniquement le fichier `.worker.ts` — zéro réécriture des classes métier.
 
 Exemple :
+
 ```
 input/
   input.worker.ts       ← contexte, Comlink.expose, postMessage — RIEN d'autre

@@ -8,6 +8,7 @@ en dev qu'en prod) totalement ignorant de Theatre.js — ni import statique, ni 
 "Authoring") qui fuiterait dans son code.
 
 Deux formats du même contenu :
+
 - **Dev** — JSON natif Theatre.js, committé, lisible/diffable, ré-exportable depuis Studio.
 - **Prod** — binaire compact `.anim`, généré au build, jamais committé.
 
@@ -53,18 +54,27 @@ sliced à un seul sheet. Validé contre un export réel (`public/game/anim/title
 
 ```ts
 interface TheatreOnDiskState {
-  sheetsById: Record<string, {
-    staticOverrides?: { byObject: Record<string, Record<string, number>> }
-    sequence?: {
-      tracksByObject: Record<string, {
-        trackIdByPropPath: Record<string, string>   // '["opacity"]' -> trackId
-        trackData: Record<string, {
-          type: 'BasicKeyframedTrack'
-          keyframes: { position: number; value: number }[]   // position en SECONDES
-        }>
-      }>
+  sheetsById: Record<
+    string,
+    {
+      staticOverrides?: { byObject: Record<string, Record<string, number>> };
+      sequence?: {
+        tracksByObject: Record<
+          string,
+          {
+            trackIdByPropPath: Record<string, string>; // '["opacity"]' -> trackId
+            trackData: Record<
+              string,
+              {
+                type: 'BasicKeyframedTrack';
+                keyframes: { position: number; value: number }[]; // position en SECONDES
+              }
+            >;
+          }
+        >;
+      };
     }
-  }>
+  >;
 }
 ```
 
@@ -153,15 +163,15 @@ veut des bornes différentes.
 
 ```ts
 interface AnimationObject {
-  objectKey: string                                        // clé Theatre — devient le préfixe d'id, ex. 'title'
-  defaults?: Record<string, number>                         // override du socle par défaut, optionnel
-  ranges?: Partial<Record<string, readonly [number, number]>>
+  objectKey: string; // clé Theatre — devient le préfixe d'id, ex. 'title'
+  defaults?: Record<string, number>; // override du socle par défaut, optionnel
+  ranges?: Partial<Record<string, readonly [number, number]>>;
 }
 interface AnimationScenario {
-  sheetName: string       // sheet Theatre, ex. 'TitleScreen'
-  fileName: string        // base de fichier sous public/game/anim/, ex. 'title-screen'
-  triggerState: AppState  // état de AppOrchestrator qui joue la séquence
-  objects: AnimationObject[]
+  sheetName: string; // sheet Theatre, ex. 'TitleScreen'
+  fileName: string; // base de fichier sous public/game/anim/, ex. 'title-screen'
+  triggerState: AppState; // état de AppOrchestrator qui joue la séquence
+  objects: AnimationObject[];
 }
 ```
 
@@ -171,6 +181,7 @@ interface AnimationScenario {
 ## Bridge Theatre — main thread, DEV only
 
 `src/_dev/@theatre/bridge/index.ts#setupTheatreBridge(orchestrator, applyAnimatedValue)` :
+
 1. `initStudio()` (`src/_dev/@theatre/studio/index.ts`) — idempotent.
 2. Pour chaque scénario : `project.sheet(scenario.sheetName)`, puis un objet Theatre par
    `AnimationObject` avec le socle de props fusionné.

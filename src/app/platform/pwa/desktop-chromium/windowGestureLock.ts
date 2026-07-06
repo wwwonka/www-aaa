@@ -9,9 +9,9 @@
 // chevauchement. Chromium PWA desktop uniquement (seul contexte où `moveTo`/`resizeTo`
 // fonctionnent), donc gardé dans le dossier `desktop-chromium/`.
 
-type GestureName = 'drag' | 'pinch'
+type GestureName = 'drag' | 'pinch';
 
-let held: GestureName | null = null
+let held: GestureName | null = null;
 
 /**
  * Tente de prendre le verrou ; renvoie `false` s'il est déjà tenu par un autre geste.
@@ -23,17 +23,23 @@ let held: GestureName | null = null
  * préemption via `heldGesture()` et s'abandonne (voir `AppWindowPinch`).
  */
 export function acquireGesture(name: GestureName): boolean {
-  if (held === null || held === name) { held = name; return true }
-  if (name === 'drag' && held === 'pinch') { held = 'drag'; return true }
-  return false
+  if (held === null || held === name) {
+    held = name;
+    return true;
+  }
+  if (name === 'drag' && held === 'pinch') {
+    held = 'drag';
+    return true;
+  }
+  return false;
 }
 
 /** Relâche le verrou si (et seulement si) c'est bien ce geste qui le tenait. */
 export function releaseGesture(name: GestureName): void {
-  if (held === name) held = null
+  if (held === name) held = null;
 }
 
 /** Geste qui tient actuellement le verrou (ou `null`). Sert au pinch à détecter une préemption. */
 export function heldGesture(): GestureName | null {
-  return held
+  return held;
 }
