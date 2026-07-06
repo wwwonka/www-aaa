@@ -58,6 +58,29 @@ if (/iPhone|iPad/.test(ua)) { ... }
 
 ---
 
+## Conventions Babylon.js
+
+Le codebase est Babylon-first — ces règles s'ajoutent aux conventions ci-dessus, sans les
+contredire :
+
+- Pas de préfixe `I` sur les interfaces (`PeerConnection`, pas `IPeerConnection`).
+- Champs privés/protégés préfixés `_` (`this._engine`).
+- **Zéro allocation dans les boucles chaudes** (rendu, simulation) : jamais
+  `position.add(velocity)` dans une boucle — utiliser `position.addInPlace(velocity)` ou
+  `position.addToRef(velocity, target)`.
+- Builders/méthodes statiques de création plutôt que constructeurs surchargés d'options
+  (`MeshBuilder.CreateGround(...)`).
+- TypeScript strict : jamais `any`, `Nullable<T>` si le type est inconnu, `readonly`
+  explicite sur les propriétés immuables, type de retour explicite sur les méthodes
+  publiques.
+
+## Formatage
+
+Aligner visuellement les déclarations de variables et imports similaires (signes `=`,
+types) quand ça améliore la lisibilité d'un bloc homogène.
+
+---
+
 ## Modules
 
 Chaque worker est un module ES6 autonome avec son propre point d'entrée (`*.worker.ts`).
