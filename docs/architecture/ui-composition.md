@@ -28,7 +28,7 @@ lui-même comme un `Container`.
 
 - `interactive` (getter/setter) — bascule `node.eventMode`/`node.cursor`, câble
   `pointertap`/`pointerover`/`pointerout` **une seule fois** (`_wired` flag) sur `onClick`/`onHover`.
-- `registerAnimatable(id)` (protégé) — voir `docs/animation-pipeline.md`, inscrit 6 propriétés de
+- `registerAnimatable(id)` (protégé) — voir `docs/architecture/animation-pipeline.md`, inscrit 6 propriétés de
   transform dans `AnimationRegistry`.
 - Hit-testing : bounds automatiques de Pixi, pas de `hitArea` explicite pour l'instant (suffisant
   pour du texte/boutons rectangulaires). À réintroduire si des formes/masques custom apparaissent,

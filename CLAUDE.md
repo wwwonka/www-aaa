@@ -7,6 +7,18 @@
 - Receiver (desktop) + Controller (phone).
 - Handoff bidirectionnel: on peut "amener le jeu" d'un device à l'autre.
 
+## 1b) Le jeu (design)
+
+- L'évasion du banc : un flock de poissons s'évade d'une pisciculture vers l'océan.
+- Top-down, moteur 3D + post-process de pixelisation ("Super Nintendo avant-garde").
+- Flock 3D à étages (les poissons ne sont pas tous au même plan).
+- Mécanique: herding + pousser des objets + survie/prédateurs.
+- Moves 2 joysticks: split du flock (sticks divergents), dash chargé (hold & swipe, direction = moyenne des sticks).
+- Progression: 1 poisson -> le banc s'accumule au fil des rencontres.
+- Styles jouables: stealth ou bulldozer/destruction.
+- Esthétique: Asie-Renaissance parallèle, tout en bambou (métal progressif).
+- Détail complet: `docs/design/game-design.md`.
+
 ## 2) Priorités d'arbitrage (ordre strict)
 
 1. Architecture multi-thread robuste.
@@ -39,6 +51,7 @@
 
 - Hot loop: SAB uniquement.
 - `postMessage`/transferables: init + assets froids seulement.
+- Script/wasm requis par plusieurs workers: fetch unique -> asset store -> chargement par worker (jamais 2 fetches réseau; wasm: `WebAssembly.Module` est structured-clonable).
 - DOD/SoA pour buffers.
 - `Atomics` pour index/flags partagés.
 - Pas de classes/objets dans le buffer de commandes.
@@ -90,7 +103,9 @@
 - Worker-first par défaut.
 - Monolith seulement pour itération locale ciblée.
 - Validation finale toujours en mode workers.
-- Code dev dans `_dev/` uniquement, jamais dans `src/`.
+- Code dev dans `_dev/` (build) et `src/_dev/` (runtime) uniquement, jamais mêlé au code prod.
+- `_dev/`/`src/_dev/`: paradigme FP autorisé (jamais shippé); unique frontière prod = `initDev` sous `import.meta.env.DEV`. Le DOD strict s'applique au runtime prod.
+- Theatre.js = outil dev universel d'animation (2D Pixi + 3D Babylon) via `AnimationRegistry`; prod = `.anim` binaire, zéro Theatre dans le bundle.
 
 ## 14) Conventions de code
 
@@ -118,9 +133,11 @@
 
 ## 17) Documentation détaillée
 
-Ce fichier reste volontairement minimal. Pour le détail, voir `docs/` :
+Ce fichier reste volontairement minimal. Pour le détail : `docs/README.md`
+(index). Quatre dossiers, par nature et non par sujet :
 
-- `docs/code-conventions.md` — naming, classes vs fonctions, conventions Babylon.js.
-- `docs/architecture-src.md` — structure réelle du code (noms actuels: `app`/`core`/`simulation`, distincts de la cible §5).
-- `docs/threading-model.md`, `docs/worker-adaptive-strategy.md`, `docs/system-allocator.md` — allocation des workers, heuristiques.
-- `docs/render-stack.md` — détail de la composition Babylon+Pixi (§9).
+- `docs/onboarding.md` — passation, à lire en premier par tout nouvel agent.
+- `docs/architecture/` — référence stable (comment le système fonctionne).
+- `docs/design/` — le jeu (mécanique, moves, esthétique).
+- `docs/decisions/` — write-once, datées (une question tranchée).
+- `docs/progress/` — vivant, se périme vite (état d'avancement, conception en cours).

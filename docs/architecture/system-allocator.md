@@ -5,8 +5,8 @@
 Avant ce doc, le placement des systèmes était codé en dur : un fichier `*.worker.ts` dédié par
 système (`assetsManager.worker.ts`), sans tenir compte du nombre de cœurs réellement disponibles.
 Sur un appareil à 2 cœurs, ça donnait déjà 3 threads (Main + Render + AssetsManager) sans même
-compter Simulation/Audio — exactement le scénario que `docs/worker-adaptive-strategy.md` met en
-garde. Voir aussi `docs/threading-model.md` pour la décision "4 threads (pas 5)" qui ne comptait
+compter Simulation/Audio — exactement le scénario que `docs/architecture/worker-adaptive-strategy.md` met en
+garde. Voir aussi `docs/architecture/threading-model.md` pour la décision "4 threads (pas 5)" qui ne comptait
 pas ce worker.
 
 `SystemAllocator` (`src/core/SystemAllocator.ts`) résout ça pour les systèmes "agiles" : il
@@ -20,7 +20,7 @@ inline sur le main thread.
   toujours un slot.
 - **Agiles (compressibles)** : `AssetsManager` aujourd'hui. Futurs candidats quand ils existeront
   réellement (pas des stubs) : Simulation, Audio, SignalingBus/Network. Ce sont des classes
-  portables au sens de `docs/worker-responsibilities.md` ("Règle de conception — Classes
+  portables au sens de `docs/architecture/worker-responsibilities.md` ("Règle de conception — Classes
   portables") — aucune référence DOM/`window`/`self`, donc déplaçables entre main thread et
   worker sans réécriture.
 
@@ -88,4 +88,4 @@ du host ni de l'allocateur.
   disponibles vs un seul (ex: répartir Assets+Simulation vs Network+Audio sur deux hosts séparés
   à 4 cœurs) — pas conçu en détail tant qu'un seul système agile existe.
 - Work Stealing / Load Balancing — déjà explicitement hors scope dans
-  `docs/worker-adaptive-strategy.md`.
+  `docs/architecture/worker-adaptive-strategy.md`.

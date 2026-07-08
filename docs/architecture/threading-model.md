@@ -39,9 +39,9 @@ Aucune logique de jeu ne tourne sur le Main Thread.
 
 ### Note — 5ᵉ thread, placement maintenant dynamique
 
-AssetsManager (voir `docs/assets-manager.md`) tourne hors du chemin chaud SAB décrit ci-dessus (pas
+AssetsManager (voir `docs/architecture/assets-manager.md`) tourne hors du chemin chaud SAB décrit ci-dessus (pas
 de boucle de jeu, juste quelques appels async au démarrage) — soit dans `src/core/SystemHost.worker.ts`
 (worker dédié), soit inline sur le main thread, selon la décision de `src/core/SystemAllocator.ts`
 au runtime. Ce doc décrit les 4 threads de la boucle de jeu (Main/Simulation/Render/Audio), pas
-l'inventaire complet des workers du projet. Voir `docs/system-allocator.md` pour la règle N-1 et
+l'inventaire complet des workers du projet. Voir `docs/architecture/system-allocator.md` pour la règle N-1 et
 le pattern de multiplexage lazy qui remplace l'ancien `assetsManager.worker.ts` codé en dur.

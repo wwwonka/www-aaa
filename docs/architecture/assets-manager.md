@@ -156,7 +156,7 @@ visible ; seul `navigator.serviceWorker.getRegistrations()` le révèle.
 `src/core/SystemHost.worker.ts` expose `createAssetsManager()` (via le registre
 `src/core/systems/registry.ts`) en multiplexage lazy `get(id)`, derrière `Comlink.expose`.
 `AppHost.ts` choisit entre `Comlink.wrap<SystemHostApi>(worker).get('assetsManager')` et un appel
-direct à `createAssetsManager()` selon la décision de `SystemAllocator` (`docs/system-allocator.md`)
+direct à `createAssetsManager()` selon la décision de `SystemAllocator` (`docs/architecture/system-allocator.md`)
 — plus un `new Worker()` codé en dur systématique.
 
 **Pourquoi le worker reste préférable quand un slot est disponible** : `warmUp()` est
@@ -178,7 +178,7 @@ frontière Comlink — Comlink awaite les valeurs thenable avant d'envoyer la r�
 `src/core/SystemAllocator.ts`. AssetsManager tourne maintenant dans un worker dédié **ou** inline
 sur le main thread selon `navigator.hardwareConcurrency` et la règle N-1. Le warm-up off-main-thread
 décrit ci-dessous reste vrai quand le mode choisi est `'worker'` — seul le _comment_ il y arrive a
-changé. Détail complet : `docs/system-allocator.md`.
+changé. Détail complet : `docs/architecture/system-allocator.md`.
 
 ## Renommages d'architecture associés (même session)
 
@@ -215,11 +215,11 @@ src/render/assets/
     ├── TextureLoader.ts   (.png, .jpg, .jpeg, .webp → 'texture' — Texture Babylon)
     ├── AudioLoader.ts     (.mp3, .ogg, .wav → 'audio' — decodeAudioData)
     ├── FontLoader.ts      (.otf, .ttf, .woff, .woff2 → 'font' — FontFace)
-    └── AnimationLoader.ts (.anim → 'anim' — binaire multi-pistes, voir docs/animation-pipeline.md)
+    └── AnimationLoader.ts (.anim → 'anim' — binaire multi-pistes, voir docs/architecture/animation-pipeline.md)
 ```
 
 `src/_dev/assets/JsonAnimationLoader.ts` (DEV only, `.json` → `'anim'`) suit exactement le même
-contrat mais vit hors de `src/render/assets/` — voir `docs/animation-pipeline.md`.
+contrat mais vit hors de `src/render/assets/` — voir `docs/architecture/animation-pipeline.md`.
 
 ### `IResourceLoader<T>` — le contrat
 

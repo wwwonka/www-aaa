@@ -79,10 +79,45 @@
 >   les props (sim worker + render worker + SAB), zéro erreur console ; URL vierge → clic
 >   prompt = PAIRING_MODE et un `PLAY` forcé reste bloqué (guard).
 >
-> **Prochaine étape : Étape 4b — heuristique adaptative** (section 7) : micro-benchmark boot
-> (<50ms), fusion de workers selon les cœurs (2c → worker unifié), `?forceTier=low`. Puis
-> Étape 5 — joysticks controller → sim via WebRTC. Le playbook CLAUDE.md §15 s'applique :
-> critique d'architecture + validation utilisateur AVANT d'implémenter.
+> - **Étape 4b** (2026-07-07) — **Tier adaptatif** (section 7) :
+>   `src/app/platform/workerStrategy.ts` (`benchmarkCompute` — batch Float32 chunké, budget
+>   40 ms ; `resolveTier` — benchmark, cœurs en secours si zone ambiguë, `?forceTier=low|high`
+>   DEV-only en override, log au boot pour calibrage). Fusion tier low : la sim est hébergée
+>   dans le render worker — nommé **`Render+SimWorker`** dans DevTools — via `src/sim/simHost.ts`
+>   (boucle 60 Hz extraite de `simulation.worker.ts`, partagée par les deux topologies ;
+>   composition dans l'entry `render.worker.ts` : API `simInit`/`simStart`/`simStop`,
+>   `RenderManager` non touché), et les systèmes agiles passent inline. AppHost : façade
+>   `simControl` unique (worker dédié vs hébergée), tier résolu avant tout spawn.
+>   Vérifié Chrome : `?dev&forceTier=low` → IN_GAME jouable WASD, pas de SimulationWorker ;
+>   `?dev` nominal → tier=high, SimulationWorker dédié, comportement inchangé ; zéro erreur.
+>   **Seuils (30k/12k ops/ms) calibrés desktop uniquement — à recalibrer sur vrais devices.**
+>
+> **Prochaine étape : Étape 5b — joysticks + transport RTC** (la 5a et la conception complète
+> sont faites, voir ci-dessus et `docs/progress/design-etapes-5-6.md` §A). Puis étape 6 (handoff).
+> Le playbook CLAUDE.md §15 s'applique : critique d'architecture + validation utilisateur
+> AVANT d'implémenter.
+>
+> - **Étape 5a** (2026-07-07) — **SAB de contrôle + dispatcher** (`docs/progress/design-etapes-5-6.md`
+>   §A.4/A.5) : constantes `CTRL_*` + `ACTION_ID` (`shared/constants.ts`), `createControlSAB`
+>   (`core/sab-manager.ts`), écrivains main-thread `writeAxes`/`pushAction`
+>   (`input/controlChannel.ts`), `drainControl` en tête de `stepOnce` dans `GameSim`
+>   (ring d'actions séquentiel + axes atomiques latest-wins), `simulation.worker.init(controlSab)`,
+>   `setMoveInput` supprimé partout — le clavier `?dev` et le monolith empruntent le pipeline
+>   prod. Vérifié Chrome : workers `?dev` (title → START → WASD déplace cible+flock, caisse
+>   poussée, zéro erreur) et `?monolith` (cible (0,0)→(−10,−10) en 2 s de S+A). Reste 5b :
+>   joysticks + transport RTC.
+>
+> **La conception complète des étapes 5 et 6 est déjà faite et validée** (2026-07-07) :
+> `docs/progress/design-etapes-5-6.md` — pipeline input (SAB de contrôle, transport binaire,
+> dispatcher), protocole de handoff (FSM d'autorité, format de snapshot, API sim), ordre
+> d'implémentation en sous-étapes 5a/5b/6a/6b. L'implémenteur suit ce document ; le
+> playbook §15 reste dû à chaque sous-étape (présenter les ajustements, attendre le go).
+>
+> **Backlog hors-brief** (repris de l'ancien `AGENT_BOARD.md`, supprimé le 2026-07-07
+> car il dupliquait cet encadré) :
+>
+> - Workbox dans le Service Worker pour le cache offline de l'App Shell (JS/CSS).
+> - Séquencer le chargement : `warmUp('app')` puis `warmUp('game')` dans `AppOrchestrator`.
 
 ## 0. Contexte et lecture préalable
 
@@ -94,8 +129,8 @@ device à l'autre (handoff bidirectionnel, autorité unique du game state).
 
 1. `/CLAUDE.md` — règles d'arbitrage non-négociables du projet.
 2. `/CLAUDE_backup.md` — détails additionnels (rendu single-canvas, playbook de validation).
-3. `docs/threading-model.md`, `docs/worker-adaptive-strategy.md`, `docs/system-allocator.md`,
-   `docs/code-conventions.md`, `docs/architecture-src.md` — état de l'architecture actuelle.
+3. `docs/architecture/threading-model.md`, `docs/architecture/worker-adaptive-strategy.md`, `docs/architecture/system-allocator.md`,
+   `docs/architecture/code-conventions.md`, `docs/architecture/src-layout.md` — état de l'architecture actuelle.
 4. Ce document — le brief de la démo à construire.
 
 **Playbook obligatoire (CLAUDE.md §15) : pour chaque étape ci-dessous, commence par une
@@ -168,12 +203,12 @@ ou `src/system/` parallèles même si un ancien CLAUDE.md les mentionne : ce son
   assets froids. DOD/SoA pour les buffers. `Atomics` pour index/flags partagés. Pas de
   classes/objets dans le buffer de commandes.
 - **WebRTC est main-thread only** : `RTCDataChannel` et l'API Gamepad ne peuvent pas
-  tourner en Worker (contrainte documentée dans `docs/threading-model.md`) — le pairing et
+  tourner en Worker (contrainte documentée dans `docs/architecture/threading-model.md`) — le pairing et
   la réception des inputs réseau vivent sur le thread principal.
 - **Input pipeline** (CLAUDE.md §7) : input physique → `ActionId` numérique, axes
   normalisés `[-1,1]` (ou fixed-point `Int32` pour atomics), ring buffer SAB Main→Sim,
   dispatcher séquentiel et déterministe en simulation, policy axes latest-wins.
-- **Conventions de code** (`docs/code-conventions.md`, déjà en vigueur — respecte-les
+- **Conventions de code** (`docs/architecture/code-conventions.md`, déjà en vigueur — respecte-les
   telles quelles) : PascalCase classes, camelCase fonctions/variables/fichiers utilitaires,
   suffixe `.worker.ts`, `SCREAMING_SNAKE_CASE` constantes, pas de classes utilitaires
   statiques (module ES6 à la place), commentaires uniquement sur le _pourquoi_.
@@ -270,7 +305,7 @@ pendant la transition).
 
 ## 7. Multithreading adaptatif
 
-- Complète l'heuristique de `docs/worker-adaptive-strategy.md` (2 cœurs → 1 worker
+- Complète l'heuristique de `docs/architecture/worker-adaptive-strategy.md` (2 cœurs → 1 worker
   unifié ; 4 cœurs → 2 workers ; >4 cœurs → 3 workers dédiés), actuellement documentée
   mais pas implémentée pour sim/render/audio (seul `AssetsManager` est câblé à
   `SystemAllocator`).

@@ -64,11 +64,22 @@ src/app/
   AppHost.ts            ← lit la stratégie, délègue, ne sait plus si unifié ou dédié
 ```
 
+## Résolu — tier adaptatif implémenté (étape 4b, 2026-07-07)
+
+`src/app/platform/workerStrategy.ts` : `benchmarkCompute()` (batch Float32 chunké, budget
+40 ms, main thread avant tout spawn) + `resolveTier()` (benchmark → cœurs en secours en zone
+ambiguë → `?forceTier=low|high` DEV-only en override). Tier `low` : la sim est hébergée dans
+le render worker (nommé `Render+SimWorker` dans DevTools) via `src/sim/simHost.ts` — la
+boucle d'hébergement est partagée avec `simulation.worker.ts` (tier `high`) — et les
+systèmes agiles passent inline. La hiérarchie à 3 niveaux du haut de ce doc reste la cible
+quand l'audio existera ; aujourd'hui la décision est binaire high/low. Seuils calibrés
+desktop uniquement (log `[AppHost] tier=` au boot pour recalibrer sur devices).
+
 ## Résolu (partiellement) — `SystemAllocator` couvre AssetsManager
 
 `assetsManager.worker.ts` (codé en dur) n'existe plus, remplacé par `src/core/SystemHost.worker.ts`
 (générique, multiplexage lazy `get(id)`) piloté par `src/core/SystemAllocator.ts` — voir
-`docs/system-allocator.md` pour le détail. La règle N-1 décrite ci-dessus y est implémentée pour
+`docs/architecture/system-allocator.md` pour le détail. La règle N-1 décrite ci-dessus y est implémentée pour
 les systèmes "agiles" (AssetsManager aujourd'hui).
 
 Reste non couvert : la hiérarchie render/simulation/audio (1/2/3 workers selon

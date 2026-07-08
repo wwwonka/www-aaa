@@ -100,7 +100,7 @@
 └─────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  CORE  (src/core/)  — partiellement implémenté, voir docs/assets-manager.md │
+│  CORE  (src/core/)  — partiellement implémenté, voir docs/architecture/assets-manager.md │
 │                                                                         │
 │  AppOrchestrator.ts  — classe, FSM xstate du Shell + cycle de vie       │
 │                         startUp()/shutDown() (renommé depuis            │
@@ -176,7 +176,7 @@ sab-manager.ts alloue un seul SAB découpé en 3 zones :
 | sab-manager (allocation SAB)                         | ✅ structure prête                           |
 | CommandBuffer (GameCommand)                          | ✅ structure prête                           |
 | AppOrchestrator (ex-AppStateMachine)                 | ✅ fonctionnel                               |
-| AssetsManager + IndexedDB + SW double-cache          | ✅ fonctionnel — voir docs/assets-manager.md |
+| AssetsManager + IndexedDB + SW double-cache          | ✅ fonctionnel — voir docs/architecture/assets-manager.md |
 | Simulation worker                                    | 🚧 stub                                      |
 | Audio worker                                         | 🚧 stub                                      |
 | gameLoop                                             | 🚧 stub                                      |
