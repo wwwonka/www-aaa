@@ -38,6 +38,7 @@ export class ShellHost {
   private _portrait = false;
   private _lastState: string | null = null;
   private _inGame = false;
+  private _pairingOpen = false;
   private _controllerMode = false;
 
   constructor(opts: ShellHostOptions) {
@@ -63,7 +64,8 @@ export class ShellHost {
       if (state === this._lastState) return; // dedupe (ASSET_* ré-émet des snapshots)
       this._lastState = state;
       this._inGame = state === 'IN_GAME';
-      this._pairing.setActive(state === 'PAIRING_MODE');
+      this._pairingOpen = state === 'PAIRING_MODE';
+      this._pairing.setActive(this._pairingOpen);
       this._sync();
     });
   }
@@ -97,9 +99,10 @@ export class ShellHost {
   private _sync(): void {
     // Gate d'orientation : portrait + en jeu.
     this._rotate?.setActive(this._portrait && this._inGame);
-    // Joysticks : actifs en jeu. START : mode controller, tant qu'on n'est pas en jeu.
+    // Joysticks : actifs en jeu. START : mode controller, tant qu'on n'est ni en jeu ni sous
+    // l'overlay de pairing (il transparaîtrait à travers le panneau à 97 % d'opacité).
     this._joysticks?.setActive(this._inGame);
-    this._joysticks?.showStart(this._controllerMode && !this._inGame);
+    this._joysticks?.showStart(this._controllerMode && !this._inGame && !this._pairingOpen);
   }
 }
 

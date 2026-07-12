@@ -2,7 +2,7 @@ import * as Comlink from 'comlink';
 import type { RenderWorkerApi } from '../render/render.worker';
 import { mountEventHandlers } from './events/_index';
 import { installBrowserGuards } from './guards/_index';
-import { detectAppContext } from './platform/ContextManager';
+import type { AppContext } from './platform/ContextManager';
 import { registerServiceWorker } from './platform/serviceWorkerRegister';
 import { setupPwaExperience } from './platform/pwa/_index';
 import { appOrchestrator } from '../core/AppOrchestrator';
@@ -35,17 +35,16 @@ export class AppHost {
    * once the canvas has been handed off to the render worker.
    *
    * @param flags - Flags de boot parsés depuis l'URL (rôle forcé session-only, etc.).
+   * @param ctx - Contexte détecté par `main.ts` (routing par rôle) — jamais controller ici,
+   * ce chemin est réservé au receiver/solo (le controller pur boote via `ControllerHost`).
    */
   async start(
-    flags?: QueryFlags,
+    flags: QueryFlags | undefined,
+    ctx: AppContext,
   ): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
-    // Un `?r=CODE` seul (URL scannée depuis le QR d'un receiver) implique le rôle controller ;
-    // les flags explicites `?controller`/`?receiver` gardent la priorité.
-    const impliedRole = flags?.roomCode != null ? ('controller' as const) : null;
-    const ctx = detectAppContext(flags?.forcedRole ?? impliedRole);
-    // Mobile en URL de base : receiver qui est aussi sa propre manette (joysticks tactiles locaux).
-    // Débloque PLAY sans pairing + autorité locale (§B.5). Faux dès qu'un rôle est forcé controller
-    // (`?controller` / `?r=` d'un QR scanné) et sur desktop (manette requise).
+    // Mobile en URL de base : receiver qui est aussi sa propre manette (joysticks tactiles
+    // locaux). Débloque PLAY sans pairing + autorité locale (§B.5). Faux sur desktop (manette
+    // requise).
     const selfControlled = ctx.platform === 'mobile' && ctx.role === 'receiver';
     installBrowserGuards();
     void registerServiceWorker(ctx.runtime);
@@ -113,14 +112,13 @@ export class AppHost {
     await renderApi.init(Comlink.transfer(offscreen, [offscreen]));
 
     // Identité de session (jamais persistée) : le receiver génère son code de room dès le boot
-    // (le QR est construit une seule fois avec les screens) mais ne joint la room MQTT qu'à
-    // OPEN_PAIRING (voir pairingHost) ; le controller reprend le code scanné dans `?r=`.
-    const shellRole = ctx.role === 'controller' ? ('controller' as const) : ('receiver' as const);
-    const roomCode = shellRole === 'receiver' ? generateRoomCode() : (flags?.roomCode ?? null);
+    // (le QR est construit une seule fois avec l'overlay shell) mais ne joint la room qu'à
+    // OPEN_PAIRING (voir pairingHost).
+    const shellRole = 'receiver' as const;
+    const roomCode = generateRoomCode();
     const deviceName = generateDeviceName();
     // DX : tester le flow deux-onglets exige le code sans scanner le QR (phone only).
-    if (import.meta.env.DEV && shellRole === 'receiver')
-      console.log(`[AppHost] room ${roomCode} — controller: ?r=${roomCode}`);
+    if (import.meta.env.DEV) console.log(`[AppHost] room ${roomCode} — controller: ?r=${roomCode}`);
 
     // URL de la page (origin+pathname) — affichée par l'overlay de pairing shell et encodée
     // dans son QR (`?r=CODE`).
@@ -150,7 +148,7 @@ export class AppHost {
     // (shell → `pairing.sendInput` ; pairing → `shell.showToast`) résolue par un holder : les
     // callbacks du shell lisent `pairing` bien après son affectation.
     const shellHost = new ShellHost({
-      usesTouchInput: selfControlled || ctx.role === 'controller',
+      usesTouchInput: selfControlled,
       onInput: (x, z) => pairing.sendInput(x, z),
       onStart: () => {
         // START shell (controller) : lance la partie ET propage au peer pairé (sync, comme le PLAY
@@ -339,7 +337,7 @@ export class AppHost {
     // `?dev` (build DEV seulement — en prod ce bloc est tree-shaké et la garde `hasController`
     // reste le seul chemin vers IN_GAME) : controller simulé pour débloquer PLAY + pilotage
     // clavier de la sphère de contrôle, comme en monolith.
-    if (import.meta.env.DEV && flags?.dev && shellRole === 'receiver') {
+    if (import.meta.env.DEV && flags?.dev) {
       appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' });
       void renderApi.setControllerPaired('DEV');
       const { attachKeyboardSimControls, attachSnapshotDevKeys } = await import(
@@ -362,18 +360,11 @@ export class AppHost {
       void renderApi.setControllerPaired(deviceName);
     }
 
-    // Un device controller boote directement sur l'interface de pairing plein écran, et le shell
-    // le met en mode controller (START DOM après pairing, plus de menu title Pixi).
-    if (ctx.role === 'controller') {
-      shellHost.setControllerMode(true);
-      appOrchestrator.send({ type: 'OPEN_PAIRING' });
-    }
-
-    // Gate d'orientation (mobile) : le jeu se joue en landscape. iOS Safari ne peut pas verrouiller
-    // l'orientation en onglet → prompt visuel réactif (shell `RotateGate` DOM). Détection côté main
-    // (`matchMedia`). En portrait, on remet les axes à zéro (soft-pause) pour ne pas laisser le
-    // flock filer sous l'overlay.
-    if (selfControlled || ctx.role === 'controller') {
+    // Gate d'orientation (mobile solo) : le jeu se joue en landscape. iOS Safari ne peut pas
+    // verrouiller l'orientation en onglet → prompt visuel réactif (shell `RotateGate` DOM).
+    // Détection côté main (`matchMedia`). En portrait, on remet les axes à zéro (soft-pause)
+    // pour ne pas laisser le flock filer sous l'overlay.
+    if (selfControlled) {
       const portraitMq = window.matchMedia('(orientation: portrait)');
       const applyOrientation = (): void => {
         const portrait = portraitMq.matches;
