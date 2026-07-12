@@ -13,9 +13,8 @@ import { PauseScreen } from '../ui/screens/PauseScreen';
 import { TitleScreen } from '../ui/screens/TitleScreen';
 import { InGameScreen } from '../ui/screens/InGameScreen';
 import { PairingOverlayScreen } from '../ui/screens/PairingOverlayScreen';
-import { ToastOverlayScreen } from '../ui/screens/ToastOverlayScreen';
-import { GamepadScreen } from '../ui/screens/GamepadScreen';
-import type { PairingPeerInfo, PairingRole } from '../ui/panels/PairingPanel';
+import { PlayingOnPhoneScreen } from '../ui/screens/PlayingOnPhoneScreen';
+import type { PairingPhase, PairingRole } from '../ui/panels/PairingPanel';
 import { startRenderLoop } from './renderLoop';
 import type { AppState, AppEvent } from '../core/AppOrchestrator';
 import { applyAnimatedValue } from './animation/AnimationRegistry';
@@ -31,11 +30,13 @@ export interface ShellContext {
   readonly roomCode: string | null;
   /** Nom de ce device, généré côté main (voir `input/signaling/identity.ts`). */
   readonly deviceName: string;
-}
-
-/** Callbacks réseau (proxy Comlink) fournis par le main — pas des `AppEvent`, donc hors `setSendToAsm`. */
-export interface PairingActions {
-  connectPeer(peerId: string): void;
+  /**
+   * Mobile en URL de base : ce receiver est aussi sa propre manette (joysticks tactiles locaux,
+   * rendus par le shell DOM, écrivant le SAB local — §B.5, autorité locale). `false` sur desktop
+   * (manette requise) et sur un vrai controller. Utilisé côté worker pour l'item title « USE AS
+   * CONTROLLER » (mobile solo uniquement).
+   */
+  readonly selfControlled: boolean;
 }
 
 /** Messages postMessage bruts relayés par le main thread (hors RPC Comlink) — voir `app/events/`. */
@@ -66,11 +67,10 @@ export class RenderManager {
     pageUrl: 'https://localhost/',
     roomCode: null,
     deviceName: 'DEVICE',
+    selfControlled: false,
   };
   private _pairingScreen: PairingOverlayScreen | null = null;
   private _titleScreen: TitleScreen | null = null;
-  private _toastScreen: ToastOverlayScreen | null = null;
-  private _pairingActions: PairingActions | null = null;
   private _sceneHandles: SceneHandles | null = null;
   private _gameScene: GameScene | null = null;
   private _gameVisible = false;
@@ -145,67 +145,63 @@ export class RenderManager {
   }
 
   /**
-   * Relaye searching ⇄ paired à l'overlay de pairing et bascule le prompt du Title Screen
-   * ("CONNECT CONTROLLER" ⇄ "START GAME") — appelé par le main au pairing/départ du peer.
+   * Débloque « START GAME » sur le Title Screen (prompt "CONNECT CONTROLLER" ⇄ "START GAME") + état
+   * pairé du gamepad. Utilisé pour le cas solo/dev (manette locale simulée) ; le cycle de pairing
+   * réseau passe, lui, par {@link setPairingPhase}.
    */
   setControllerPaired(peerName: string | null): void {
-    this._pairingScreen?.setPaired(peerName);
     this._titleScreen?.setControllerConnected(peerName !== null);
   }
 
-  /** Liste des peers découverts (receiver) — relayée à l'overlay de pairing. */
-  setDiscoveredPeers(peers: readonly PairingPeerInfo[]): void {
-    this._pairingScreen?.setDiscoveredPeers(peers);
-  }
-
-  /** @param actions - Callbacks réseau proxifiés Comlink, invoqués par les chips de l'UI de pairing. */
-  setPairingActions(actions: PairingActions): void {
-    this._pairingActions = actions;
-  }
-
-  /** @param message - Texte du toast, affiché en haut de l'écran au-dessus de tout (couche notifications). */
-  showToast(message: string): void {
-    this._toastScreen?.show(message);
+  /**
+   * Phase du cycle de pairing réseau — **source unique** poussée par `pairingHost`. Pilote l'overlay
+   * (QR → pastille → paired) et, en `paired`/`searching`, le prompt du Title Screen.
+   */
+  setPairingPhase(phase: PairingPhase, peerName: string | null): void {
+    this._pairingScreen?.setPhase(phase, peerName);
+    if (phase === 'paired') this._titleScreen?.setControllerConnected(true);
+    else if (phase === 'searching') this._titleScreen?.setControllerConnected(false);
   }
 
   /** @param fn - Callback invoked whenever a screen (e.g. `PauseScreen`) needs to send an `AppEvent` back to the state machine. */
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
     this._screenManager = new ScreenManager(this._ui.gameUI, this._ui.overlayUI);
 
-    const { role, pageUrl, roomCode, deviceName } = this._shellContext;
+    const { role, pageUrl, roomCode, deviceName, selfControlled } = this._shellContext;
 
     this._screenManager.register('PAUSED', new PauseScreen(fn, this._width, this._height));
-    // Le device controller n'a pas de title/attract screen : son écran de base est la manette
-    // (START seul pour l'instant, joysticks à l'Étape 5).
-    if (role === 'controller') {
-      this._screenManager.register(
-        'TITLE_SCREEN',
-        await GamepadScreen.create(this._width, this._height, () => fn({ type: 'PLAY' })),
-      );
-    } else {
+    // Les joysticks + START ont migré dans le shell DOM (`src/app/shell/`). Un device controller
+    // n'a donc plus d'écran Pixi de base (le shell DOM affiche START/joysticks au-dessus du canvas ;
+    // Phase 4 : le controller pur ne spawnera même plus ce worker). Le receiver/solo garde son
+    // Title Screen Pixi ; l'input tactile vient du shell.
+    if (role !== 'controller') {
       this._titleScreen = await TitleScreen.create(
         this._width,
         this._height,
         () => fn({ type: 'OPEN_PAIRING' }),
         () => fn({ type: 'PLAY' }),
+        // Item « USE DEVICE AS CONTROLLER » : mobile solo uniquement (intercepté par AppHost → scanner).
+        selfControlled ? () => fn({ type: 'USE_AS_CONTROLLER' }) : undefined,
       );
       this._screenManager.register('TITLE_SCREEN', this._titleScreen);
+      this._screenManager.register('IN_GAME', new InGameScreen(this._width, this._height));
+      this._screenManager.register(
+        'PLAYING_ON_PHONE',
+        await PlayingOnPhoneScreen.create(this._width, this._height, () =>
+          fn({ type: 'REQUEST_HANDOFF' }),
+        ),
+      );
     }
-    this._screenManager.register('IN_GAME', new InGameScreen(this._width, this._height));
 
     this._pairingScreen = await PairingOverlayScreen.create(this._width, this._height, {
       role,
       pageUrl,
       roomCode,
       deviceName,
-      onConnectPeer: (peerId) => this._pairingActions?.connectPeer(peerId),
       onClose: () => fn({ type: 'CLOSE_PAIRING' }),
     });
     this._screenManager.register('PAIRING_MODE', this._pairingScreen);
-
-    // Hors ScreenManager : lié à aucun AppState, toujours visible, sur la couche notifications.
-    this._toastScreen = await ToastOverlayScreen.create(this._width, this._height);
-    this._ui.notificationUI.addChild(this._toastScreen.node);
+    // Toasts + gate d'orientation ont migré dans le shell DOM (`src/app/shell/`, main thread).
   }
 
   /**
@@ -288,7 +284,6 @@ export class RenderManager {
         this._ui.resize(w, h);
         this._pauseBlur.resize(w, h);
         this._screenManager?.resize(w, h);
-        this._toastScreen?.resize(w, h);
         this._frame(performance.now());
       }
       if (e.data?.type === 'visibility') {
@@ -321,7 +316,6 @@ export class RenderManager {
     this._lastTime = ts;
 
     this._screenManager?.update(delta);
-    this._toastScreen?.update(delta);
     updateAnimations(delta);
 
     if (this._pauseBlur.mode !== 'frozen') {

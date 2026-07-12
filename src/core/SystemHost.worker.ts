@@ -5,7 +5,7 @@
  * casserait l'analyse statique de Vite sur le pattern `new URL(..., import.meta.url)` utilisé
  * par `AppHost.ts` pour le chunking).
  *
- * Remplace l'ancien `assetsManager.worker.ts` codé en dur — voir `docs/system-allocator.md`.
+ * Remplace l'ancien `assetsManager.worker.ts` codé en dur — voir `docs/architecture/system-allocator.md`.
  */
 // En premier — doit être évalué avant tout autre import pour attraper leurs erreurs d'évaluation
 // (no-op en prod, voir le fichier).

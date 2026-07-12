@@ -3,12 +3,20 @@
 import '../_dev/workerErrorRelay';
 import * as Comlink from 'comlink';
 import { RenderManager } from './RenderManager';
-import type { PairingActions, ShellContext } from './RenderManager';
+import type { ShellContext } from './RenderManager';
 import type { AppState, AppEvent } from '../core/AppOrchestrator';
-import type { PairingPeerInfo } from '../ui/panels/PairingPanel';
+import type { PairingPhase } from '../ui/panels/PairingPanel';
 import { devLoadersReady } from './assets/registerDefaultLoaders';
+import { createSimHost } from '../sim/simHost';
+import type { SimHost } from '../sim/simHost';
 
 const manager = new RenderManager();
+
+// Tier `low` (worker unifié Render+Sim, docs/architecture/worker-adaptive-strategy.md) : la sim est
+// hébergée ici, sur le même event loop que le rendu — un device à peu de cœurs n'a de
+// toute façon qu'un fil d'exécution à offrir, autant s'épargner le context switching.
+// Composition au niveau de l'entry worker uniquement : RenderManager reste pur rendu.
+let simHost: SimHost | null = null;
 
 const api = {
   async init(canvas: OffscreenCanvas, targetFps = 60): Promise<void> {
@@ -29,19 +37,9 @@ const api = {
     manager.setControllerPaired(peerName);
   },
 
-  /** Peers du rôle opposé découverts dans la room — chips cliquables sur le receiver. */
-  setDiscoveredPeers(peers: PairingPeerInfo[]): void {
-    manager.setDiscoveredPeers(peers);
-  },
-
-  /** Callbacks réseau (proxy Comlink) invoqués par les chips de pairing — voir `RenderManager.setPairingActions`. */
-  setPairingActions(actions: PairingActions): void {
-    manager.setPairingActions(actions);
-  },
-
-  /** Affiche un toast au-dessus de tout (slide-in depuis le haut, auto-dismiss). */
-  showToast(message: string): void {
-    manager.showToast(message);
+  /** Phase du cycle de pairing (searching/pairing/paired) — source unique côté `pairingHost`. */
+  setPairingPhase(phase: PairingPhase, peerName: string | null): void {
+    manager.setPairingPhase(phase, peerName);
   },
 
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
@@ -82,6 +80,34 @@ const api = {
     targetPosition: Float32Array;
   }): void {
     manager.attachGameBuffers(buffers);
+  },
+
+  /** Tier `low` uniquement : héberge la sim dans CE worker et branche ses buffers au rendu. */
+  async simInit(controlSab: SharedArrayBuffer): Promise<void> {
+    simHost ??= createSimHost();
+    const buffers = await simHost.init(controlSab);
+    manager.attachGameBuffers(buffers);
+  },
+
+  simStart(): void {
+    simHost?.start();
+  },
+
+  simStop(): void {
+    simHost?.stop();
+  },
+
+  /** Tier `low` : snapshot de handoff de la sim hébergée — transfert, pas copie. */
+  // Promise explicite : le type brut doit exposer Promise<ArrayBuffer> pour rester compatible Remote<>.
+  simCapture(): Promise<ArrayBuffer> {
+    if (simHost === null) throw new Error('[render.worker] simCapture avant simInit');
+    const buf = simHost.capture();
+    return Promise.resolve(Comlink.transfer(buf, [buf]));
+  },
+
+  simRestore(buf: ArrayBuffer): void {
+    if (simHost === null) throw new Error('[render.worker] simRestore avant simInit');
+    simHost.restore(buf);
   },
 
   dispose(): void {

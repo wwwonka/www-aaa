@@ -3,7 +3,7 @@
 
 /** Attache les listeners clavier et retourne une fonction de détachement. */
 export function attachKeyboardSimControls(
-  setMoveInput: (dirX: number, dirZ: number) => void,
+  onAxes: (dirX: number, dirZ: number) => void,
 ): () => void {
   const pressed = new Set<string>();
 
@@ -19,7 +19,7 @@ export function attachKeyboardSimControls(
       x *= inv;
       z *= inv;
     }
-    setMoveInput(x, z);
+    onAxes(x, z);
   };
 
   const onKeyDown = (e: KeyboardEvent): void => {
@@ -43,4 +43,34 @@ export function attachKeyboardSimControls(
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('blur', onBlur);
   };
+}
+
+/**
+ * Touches C (capture) / R (restore du dernier snapshot) — vérification du round-trip de
+ * snapshot (étape 6a) : capturer, laisser tourner, restaurer → l'état doit revenir exactement.
+ */
+export function attachSnapshotDevKeys(
+  capture: () => Promise<ArrayBuffer>,
+  restore: (buf: ArrayBuffer) => Promise<void>,
+): () => void {
+  let lastSnapshot: ArrayBuffer | null = null;
+
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if (e.code === 'KeyC') {
+      void capture().then((buf) => {
+        lastSnapshot = buf;
+        console.log(`[simControls] snapshot capturé (${buf.byteLength} octets)`);
+      });
+    } else if (e.code === 'KeyR') {
+      if (lastSnapshot === null) {
+        console.warn('[simControls] aucun snapshot à restaurer — presser C d’abord');
+        return;
+      }
+      // Copie : le buffer part en transfert (neutered) — garder l'original re-restaurable.
+      void restore(lastSnapshot.slice(0)).then(() => console.log('[simControls] snapshot restauré'));
+    }
+  };
+
+  window.addEventListener('keydown', onKeyDown);
+  return () => window.removeEventListener('keydown', onKeyDown);
 }

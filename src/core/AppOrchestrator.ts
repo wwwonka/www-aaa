@@ -15,6 +15,12 @@ export type AppEvent =
   | { type: 'PLAY' }
   | { type: 'OPEN_PAIRING' }
   | { type: 'CLOSE_PAIRING' }
+  // Émis par l'UI (PLAY HERE / BRING IT BACK) mais intercepté par AppHost → HandoffCoordinator :
+  // aucune transition ici, l'autorité est orthogonale à l'AppState (design étapes 5-6 §B.1).
+  | { type: 'REQUEST_HANDOFF' }
+  // Émis par l'UI (item title « USE DEVICE AS CONTROLLER ») mais intercepté par AppHost → ouvre le
+  // scanner QR in-app puis rejoint la room scannée en controller. Aucune transition d'AppState ici.
+  | { type: 'USE_AS_CONTROLLER' }
   | { type: 'PAUSE' }
   | { type: 'RESUME' }
   | { type: 'QUIT' }

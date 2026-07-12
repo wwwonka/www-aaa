@@ -5,12 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:tunnel": "node _dev/dev-tunnel.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:one": "playwright test",
+    "test:e2e:report": "playwright show-report _dev/playwright-report"
   },
   "dependencies": {
     "@babylonjs/core": "^9.14.0",
@@ -20,14 +26,17 @@
     "@pixi/ui": "^2.3.2",
     "@theatre/core": "^0.7.2",
     "@trystero-p2p/mqtt": "^0.25.2",
+    "@trystero-p2p/nostr": "0.25.2",
     "comlink": "^4.4.2",
     "pixi-filters": "^6.1.5",
     "pixi.js": "^8.19.0",
+    "qr-scanner": "^1.4.2",
     "qrcode": "^1.5.4",
     "xstate": "^5.32.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.61.1",
     "@theatre/studio": "^0.7.2",
     "@types/qrcode": "^1.5.6",
     "eslint": "^10.6.0",

@@ -4,7 +4,7 @@
  * de démarrage — c'est `AppOrchestrator` qui appelle {@link startUp} une fois l'instance
  * obtenue, pour garder le contrôle des dépendances entre systèmes.
  *
- * @see docs/system-allocator.md
+ * @see docs/architecture/system-allocator.md
  */
 export interface SystemLifecycle {
   /** Démarre le système (ex: warm-up des assets). Appelé par AppOrchestrator, jamais par le host. */

@@ -2,7 +2,7 @@
 // le domaine sim doit rester portable tel quel dans simulation.worker.ts (étape 4).
 // Référence d'implémentation : le plugin HavokPlugin de @babylonjs/core (wrapper du même binding).
 import HavokPhysics from '@babylonjs/havok';
-import type { HavokPhysicsWithBindings, Vector3 } from '@babylonjs/havok';
+import type { HavokPhysicsWithBindings, QTransform, Quaternion, Vector3 } from '@babylonjs/havok';
 import wasmUrl from '@babylonjs/havok/lib/esm/HavokPhysics.wasm?url';
 import { GRAVITY_Y } from '../shared/config';
 
@@ -119,6 +119,32 @@ export class PhysicsEngine {
   /** Vélocité linéaire — chemin froid uniquement (snapshot de handoff, étape 6) : le binding alloue. */
   readLinearVelocity(handle: BodyHandle): Vector3 {
     return this._hk.HP_Body_GetLinearVelocity(this._bodies[handle])[1];
+  }
+
+  /** Position + rotation (quaternion) — chemin froid uniquement (snapshot) : le binding alloue. */
+  readQTransform(handle: BodyHandle): QTransform {
+    return this._hk.HP_Body_GetQTransform(this._bodies[handle])[1];
+  }
+
+  /** Vélocité angulaire — chemin froid uniquement (snapshot) : le binding alloue. */
+  readAngularVelocity(handle: BodyHandle): Vector3 {
+    return this._hk.HP_Body_GetAngularVelocity(this._bodies[handle])[1];
+  }
+
+  /** Restaure transform + vélocités d'un corps (restore de snapshot, chemin froid). */
+  restoreBody(
+    handle: BodyHandle,
+    position: Vector3,
+    rotation: Quaternion,
+    linearVelocity: Vector3,
+    angularVelocity: Vector3,
+  ): void {
+    const body = this._bodies[handle];
+    this._hk.HP_Body_SetQTransform(body, [position, rotation]);
+    this._hk.HP_Body_SetLinearVelocity(body, linearVelocity);
+    this._hk.HP_Body_SetAngularVelocity(body, angularVelocity);
+    // Un batch de Set peut réallouer le body buffer (comme un step) — resynchro immédiate.
+    this._bodyBufferBase = this._hk.HP_World_GetBodyBuffer(this._world)[1];
   }
 
   step(dtSec: number): void {

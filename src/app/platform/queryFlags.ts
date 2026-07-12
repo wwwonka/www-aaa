@@ -11,6 +11,11 @@ export interface QueryFlags {
    * en prod : la garde `hasController` reste le seul chemin vers `IN_GAME`).
    */
   readonly dev: boolean;
+  /**
+   * `?forceTier=low|high` — court-circuite la détection de tier (benchmark + cœurs) pour
+   * tester le mode dégradé de façon déterministe (DEV uniquement, ignoré en prod).
+   */
+  readonly forceTier: 'low' | 'high' | null;
 }
 
 /**
@@ -33,10 +38,16 @@ export function parseQueryFlags(search: string): QueryFlags {
   const rawRoomCode = params.get('r');
   const roomCode = rawRoomCode !== null && rawRoomCode !== '' ? rawRoomCode.toUpperCase() : null;
 
+  const rawTier = params.get('forceTier');
+  if (rawTier !== null && rawTier !== 'low' && rawTier !== 'high') {
+    console.warn(`[queryFlags] ?forceTier=${rawTier} invalide — attendu low|high, ignoré`);
+  }
+
   return {
     forcedRole: controller ? 'controller' : receiver ? 'receiver' : null,
     roomCode,
     monolith: params.has('monolith'),
     dev: params.has('dev'),
+    forceTier: rawTier === 'low' || rawTier === 'high' ? rawTier : null,
   };
 }

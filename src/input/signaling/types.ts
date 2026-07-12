@@ -20,7 +20,15 @@ export interface PairingChannelCallbacks {
   /** Handshake `connect` → `paired` abouti — les deux côtés le reçoivent. */
   onPaired(peer: DiscoveredPeer): void;
   /** Le peer distant a lancé la partie (action `start`). */
-  onStart(): void;
+  onStart(peerId: string): void;
+  /** Input analogique distant encodé en binaire (int16/int16/seq). */
+  onInput(payload: Uint8Array, peerId: string): void;
+  /** Le peer demande l'autorité (`hoReq`) — répondre par `hoState` si on est ACTIVE. */
+  onHandoffRequest(peerId: string): void;
+  /** Snapshot complet reçu (`hoState`, layout §B.3) — restaurer puis ACK. */
+  onHandoffState(payload: Uint8Array, peerId: string): void;
+  /** ACK (`hoAck`, couvre `confirmed` ET `returned` du brief) — l'autorité est cédée. */
+  onHandoffAck(peerId: string): void;
 }
 
 export interface PairingChannelOptions {
@@ -29,6 +37,11 @@ export interface PairingChannelOptions {
   readonly roomId: string;
   readonly deviceName: string;
   readonly callbacks: PairingChannelCallbacks;
+  /**
+   * Serveurs STUN/TURN pour la traversée NAT (voir `iceServers.ts`). Omis = pas de `rtcConfig`
+   * (connexion directe seulement, même-LAN). Résolu par le caller avant `join` (creds éphémères).
+   */
+  readonly iceServers?: readonly RTCIceServer[];
 }
 
 /**
@@ -41,5 +54,13 @@ export interface PairingChannel {
   requestConnect(peerId: string): void;
   /** Propage le lancement de partie au peer pairé. */
   sendStart(): void;
+  /** Envoie un payload input binaire au peer pairé. */
+  sendInput(payload: Uint8Array, peerId: string): void;
+  /** Demande l'autorité au peer pairé (protocole de handoff §B.2). */
+  sendHandoffRequest(peerId: string): void;
+  /** Envoie le snapshot complet (§B.3) au demandeur. */
+  sendHandoffState(payload: Uint8Array, peerId: string): void;
+  /** Confirme la prise d'autorité à l'ex-autorité. */
+  sendHandoffAck(peerId: string): void;
   leave(): Promise<void>;
 }

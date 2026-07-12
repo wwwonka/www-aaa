@@ -34,6 +34,17 @@
         background: #000;
         overflow: hidden;
       }
+      /* iOS : couper la sélection de texte + le callout au long-press (la « loupe ») et le flash
+         de tap. Sans -webkit-touch-callout:none, un appui long sur le canvas fait apparaître la
+         loupe de sélection. touch-action:none tue déjà le double-tap-zoom. */
+      html,
+      body,
+      #canvas {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
       #canvas {
         display: block;
         width: 100dvw;

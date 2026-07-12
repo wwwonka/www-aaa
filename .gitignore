@@ -36,3 +36,14 @@ Icon?
 .agentsroom/handoff-summary-*.md
 _dev/certs/*.pem
 _dev/.devlog
+_dev/playwright-report/
+test-results/
+blob-report/
+
+# Logseq recrée ces dossiers automatiquement — pas trackés (voir docs/board.md)
+docs/journals/
+docs/pages/
+
+# Artefacts transitoires du hook SessionEnd (résumé Ollama)
+.claude/hooks/.session-end-debug.json
+.claude/hooks/.session-end-error.log

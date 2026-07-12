@@ -8,7 +8,7 @@ export interface SystemAllocation<T extends string> {
 }
 
 /**
- * Décide si les systèmes "agiles" (compressibles — voir `docs/system-allocator.md`) tournent
+ * Décide si les systèmes "agiles" (compressibles — voir `docs/architecture/system-allocator.md`) tournent
  * dans un `SystemHost` worker dédié ou inline sur le main thread, selon le nombre de cœurs
  * logiques disponibles.
  *
@@ -20,8 +20,8 @@ export interface SystemAllocation<T extends string> {
  * @param hardwareConcurrency - `navigator.hardwareConcurrency`, nombre de cœurs logiques rapportés
  * @param agileSystems - identifiants des systèmes agiles à placer (ex: `['assetsManager']`)
  * @returns le mode choisi et la liste des systèmes inchangée, pour que l'appelant sache quoi instancier où
- * @see docs/system-allocator.md
- * @see docs/worker-adaptive-strategy.md
+ * @see docs/architecture/system-allocator.md
+ * @see docs/architecture/worker-adaptive-strategy.md
  */
 export function allocateSystems<T extends string>(
   hardwareConcurrency: number,

@@ -1,5 +1,5 @@
 // Allocates and slices the SharedArrayBuffer for all workers
-import { SAB_BOID_STRIDE } from '../shared/constants';
+import { SAB_BOID_STRIDE, CTRL_SAB_INT32_LENGTH } from '../shared/constants';
 
 /**
  * Allocates one SharedArrayBuffer sized to hold, back to back, the boid transform matrices
@@ -12,4 +12,13 @@ export function createSAB(boidCount: number): SharedArrayBuffer {
   const stateBytes = boidCount * 4 * Int32Array.BYTES_PER_ELEMENT;
   const audioBytes = 256 * Int32Array.BYTES_PER_ELEMENT; // 256-slot event queue
   return new SharedArrayBuffer(matrixBytes + stateBytes + audioBytes);
+}
+
+/**
+ * Allocates the control SharedArrayBuffer (main → sim input pipeline, CLAUDE.md §7):
+ * atomic latest-wins axes plus the discrete-action ring buffer. Layout constants in
+ * `src/shared/constants.ts` (`CTRL_*`), design in `docs/progress/design-etapes-5-6.md` §A.4.
+ */
+export function createControlSAB(): SharedArrayBuffer {
+  return new SharedArrayBuffer(CTRL_SAB_INT32_LENGTH * Int32Array.BYTES_PER_ELEMENT);
 }

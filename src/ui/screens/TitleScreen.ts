@@ -30,8 +30,9 @@ export class TitleScreen extends UIScreen {
     height: number,
     onConnectController: () => void,
     onPlay: () => void,
+    onUseAsController?: () => void,
   ): Promise<TitleScreen> {
-    const panel = await TitleMenuPanel.create({ onConnectController, onPlay });
+    const panel = await TitleMenuPanel.create({ onConnectController, onPlay, onUseAsController });
     return new TitleScreen(width, height, panel);
   }
 

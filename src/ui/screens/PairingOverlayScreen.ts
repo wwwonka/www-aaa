@@ -2,7 +2,7 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { UIScreen } from '../UIScreen';
 import { easeIn, easeOut } from '../layout';
 import { PairingPanel } from '../panels/PairingPanel';
-import type { PairingPeerInfo, PairingRole } from '../panels/PairingPanel';
+import type { PairingPhase, PairingRole } from '../panels/PairingPanel';
 
 interface PairingOverlayOptions {
   readonly role: PairingRole;
@@ -10,8 +10,6 @@ interface PairingOverlayOptions {
   /** Code de session encodé dans le QR (`?r=`) — `null` côté controller. */
   readonly roomCode: string | null;
   readonly deviceName: string;
-  /** Clic sur le chip d'un peer découvert — relayé au main (envoi de `connect`). */
-  readonly onConnectPeer: (peerId: string) => void;
   /** Invoqué par le backdrop (receiver) ou le ✕ (controller) — remonte `CLOSE_PAIRING` au main. */
   readonly onClose: () => void;
 }
@@ -78,14 +76,9 @@ export class PairingOverlayScreen extends UIScreen {
     return new PairingOverlayScreen(width, height, panel, options);
   }
 
-  /** Relaye searching ⇄ paired au panneau — appelé par `RenderManager` sur `CONTROLLER_CONNECTED`. */
-  setPaired(peerName: string | null): void {
-    this._panel.setPaired(peerName);
-  }
-
-  /** Relaye la liste des peers découverts au panneau (receiver) — voir `PairingPanel.setDiscoveredPeers`. */
-  setDiscoveredPeers(peers: readonly PairingPeerInfo[]): void {
-    this._panel.setDiscoveredPeers(peers);
+  /** Relaye la phase de pairing au panneau (source unique côté `pairingHost`). */
+  setPhase(phase: PairingPhase, peerName: string | null): void {
+    this._panel.setPhase(phase, peerName);
   }
 
   /** Receiver : slide-up custom (pas le fade de base) ; controller : fade `UIScreen` standard. */
@@ -113,6 +106,7 @@ export class PairingOverlayScreen extends UIScreen {
   /** Fait avancer le tween de slide (receiver) en plus du fade de base — voir `SLIDE_MS`. */
   override update(delta: number): void {
     super.update(delta);
+    this._panel.update(delta); // fondu du QR (searching → pairing)
     if (this._slideDir === null) return;
 
     this._slideElapsed += delta;

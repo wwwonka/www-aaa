@@ -12,11 +12,23 @@ import {
   SIM_STEP_MS,
   PROP_DEFS,
 } from '../shared/config';
-import { SAB_BOID_STRIDE } from '../shared/constants';
+import {
+  SAB_BOID_STRIDE,
+  CTRL_AXIS_X,
+  CTRL_AXIS_Z,
+  CTRL_RING_WRITE,
+  CTRL_RING_READ,
+  CTRL_RING_BASE,
+  CTRL_RING_SLOTS,
+  CTRL_RING_SLOT_STRIDE,
+  CTRL_FIXED_POINT,
+} from '../shared/constants';
 import { createSAB } from '../core/sab-manager';
 import { PhysicsEngine } from './PhysicsEngine';
 import type { BodyHandle } from './PhysicsEngine';
 import { createBoidSimulation } from './BoidSimulation';
+import { captureSnapshot, restoreSnapshot } from './snapshot';
+import type { SimSnapshotState } from './snapshot';
 
 export interface GameSim {
   /** Matrices monde 4x4 des boids — vue Float32 sur le SAB, lue par le renderer (thin instances). */
@@ -27,16 +39,22 @@ export interface GameSim {
   readonly propCount: number;
   /** Position courante de la sphère de contrôle invisible (xyz) — lecture seule côté rendu. */
   readonly targetPosition: Float32Array;
-  /** Direction de déplacement de la sphère de contrôle, normalisée ou nulle (plan XZ). */
-  setMoveInput(dirX: number, dirZ: number): void;
   /** Avance la simulation du temps écoulé (pas fixes internes de `SIM_STEP_MS`). */
   update(deltaMs: number): void;
+  /** Sérialise l'état complet — layout §B.3, chemin froid (allocations tolérées), sim stoppée de préférence. */
+  captureSnapshot(): ArrayBuffer;
+  /** Restaure un snapshot ; jette si version/counts ne matchent pas (les deux builds doivent être identiques). */
+  restoreSnapshot(buf: ArrayBuffer): void;
   dispose(): void;
 }
 
 const MAX_STEPS_PER_UPDATE = 5; // anti "spirale de la mort" si l'onglet reprend après un gel
 
-export async function createGameSim(): Promise<GameSim> {
+/**
+ * @param controlView - vue Int32 sur le SAB de contrôle (`createControlSAB`), unique voie
+ * d'entrée des inputs : axes atomiques latest-wins + ring d'actions discrètes (CLAUDE.md §7).
+ */
+export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
   const physics = await PhysicsEngine.create();
 
   // Sol (face supérieure à y=0) + murs invisibles de confinement.
@@ -127,7 +145,26 @@ export async function createGameSim(): Promise<GameSim> {
     }
   };
 
+  // Dispatcher central (CLAUDE.md §7) : séquentiel et déterministe — le ring d'actions est
+  // drainé dans l'ordre d'écriture, puis les axes sont lus en latest-wins. Seul lecteur du SAB.
+  const drainControl = (): void => {
+    let read = Atomics.load(controlView, CTRL_RING_READ);
+    const write = Atomics.load(controlView, CTRL_RING_WRITE);
+    while (read < write) {
+      const base = CTRL_RING_BASE + (read % CTRL_RING_SLOTS) * CTRL_RING_SLOT_STRIDE;
+      const actionId = Atomics.load(controlView, base);
+      // Aucun ActionId n'a encore de producteur (dash/split = moves futurs) — le drain
+      // maintient le contrat "aucune action perdue" dès aujourd'hui.
+      void actionId;
+      read++;
+    }
+    Atomics.store(controlView, CTRL_RING_READ, read);
+    moveInput[0] = Atomics.load(controlView, CTRL_AXIS_X) / CTRL_FIXED_POINT;
+    moveInput[1] = Atomics.load(controlView, CTRL_AXIS_Z) / CTRL_FIXED_POINT;
+  };
+
   const stepOnce = (dtSec: number): void => {
+    drainControl();
     targetPosition[0] += moveInput[0] * TARGET_SPEED * dtSec;
     targetPosition[2] += moveInput[1] * TARGET_SPEED * dtSec;
     const limit = ARENA_HALF_EXTENT - 1;
@@ -157,6 +194,26 @@ export async function createGameSim(): Promise<GameSim> {
     physics.step(dtSec);
   };
 
+  // Snapshot de handoff (§B.3) — layout binaire isolé dans snapshot.ts, GameSim n'expose
+  // que la vue sur son état interne (chemin froid, jamais en boucle chaude).
+  const snapshotState: SimSnapshotState = {
+    physics,
+    boidHandles,
+    propHandles,
+    positions,
+    prevPositions,
+    velocities,
+    headings,
+    targetPosition,
+    moveInput,
+    getAccumulatorMs: () => accumulatorMs,
+    setAccumulatorMs: (ms) => {
+      accumulatorMs = ms;
+    },
+    readAllPositions,
+    writeMatrices,
+  };
+
   // Premier remplissage : matrices valides avant le premier update (le rendu peut lire tout de suite).
   physics.step(SIM_STEP_MS / 1000);
   readAllPositions();
@@ -169,10 +226,6 @@ export async function createGameSim(): Promise<GameSim> {
     boidCount: BOID_COUNT,
     propCount: PROP_DEFS.length,
     targetPosition,
-    setMoveInput(dirX: number, dirZ: number): void {
-      moveInput[0] = dirX;
-      moveInput[1] = dirZ;
-    },
     update(deltaMs: number): void {
       accumulatorMs += deltaMs;
       let steps = 0;
@@ -184,6 +237,8 @@ export async function createGameSim(): Promise<GameSim> {
       if (accumulatorMs > SIM_STEP_MS) accumulatorMs = 0; // retard irrattrapable : on lâche
       if (steps > 0) writeMatrices();
     },
+    captureSnapshot: () => captureSnapshot(snapshotState),
+    restoreSnapshot: (buf) => restoreSnapshot(buf, snapshotState),
     dispose(): void {
       physics.dispose();
     },

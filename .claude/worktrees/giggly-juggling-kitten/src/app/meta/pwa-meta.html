@@ -1,0 +1,17 @@
+    <!-- PWA manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Favicons -->
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+
+    <!-- Standard PWA meta -->
+    <!-- Must exactly match manifest.webmanifest's theme_color — this is what
+         Chrome paints behind the Window Controls Overlay's minimize/maximize/
+         close buttons on desktop; a mismatch between the two is why those
+         corners can render a stale/wrong gray instead of the app's actual
+         black. The spec doesn't support transparency there, only solid
+         colors, so this is as close to "see the game through it" as the
+         platform allows. -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Wireless game controller over WebRTC — use your phone as a dual-joystick gamepad for any screen." />
+    <meta name="mobile-web-app-capable" content="yes" />

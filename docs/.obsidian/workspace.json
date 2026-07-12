@@ -1,0 +1,201 @@
+{
+  "main": {
+    "id": "a6d16710f21ee62b",
+    "type": "split",
+    "children": [
+      {
+        "id": "8c68d10fd2585f08",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "59b1f14408486b95",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "sessions/2026-07-08.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2026-07-08"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "0e0aa287318471c9",
+    "type": "split",
+    "children": [
+      {
+        "id": "e568fa456c7fceb9",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "282a8eacefe35e1d",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Explorateur de fichiers"
+            }
+          },
+          {
+            "id": "7a4e9ebba106ac0d",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Rechercher"
+            }
+          },
+          {
+            "id": "fc5091704fb244d4",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Signets"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 241.5
+  },
+  "right": {
+    "id": "6b51b02601d721c4",
+    "type": "split",
+    "children": [
+      {
+        "id": "db6a216ab35ecc52",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b1d32a5ee824ab59",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "onboarding.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Rétrolien pour onboarding"
+            }
+          },
+          {
+            "id": "479bac2a666c232c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Liens sortants"
+            }
+          },
+          {
+            "id": "0a0ff8834db92af7",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Mots-clés"
+            }
+          },
+          {
+            "id": "2dc8e719e9369b79",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Toutes les propriétés"
+            }
+          },
+          {
+            "id": "ae17f70b2d47ffb6",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": true,
+                "showSearch": true,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Plan"
+            }
+          }
+        ],
+        "currentTab": 3
+      }
+    ],
+    "direction": "horizontal",
+    "width": 293.5
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Ouvrir le sélecteur rapide": false,
+      "graph:Ouvrir la vue graphique": false,
+      "canvas:Créer une nouvelle toile": false,
+      "daily-notes:Ouvrir la note quotidienne": false,
+      "templates:Insérer le modèle": false,
+      "command-palette:Ouvrir la palette de commandes": false,
+      "bases:Créer une nouvelle base": false,
+      "obsidian-git:Open Git source control": false,
+      "obsidian-kanban:Create new board": false
+    }
+  },
+  "active": "59b1f14408486b95",
+  "lastOpenFiles": [
+    "decisions/2026-07-05-shared-webgl-context-investigation.md",
+    "sessions/2026-07-09.md",
+    "progress/design-etapes-5-6.md",
+    "board.md",
+    "pages/contents.md",
+    "README.md",
+    "onboarding.md",
+    "templates/session-template.md",
+    "templates",
+    "design/game-design.md",
+    "2026-07-08.md",
+    "decisions/2026-07-07-reorganisation-src.md"
+  ]
+}

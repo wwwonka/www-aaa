@@ -9,6 +9,11 @@ export interface TitleMenuPanelHandlers {
   readonly onConnectController: () => void;
   /** Click du prompt quand un controller est pairé (`START GAME`) — lance la partie. */
   readonly onPlay: () => void;
+  /**
+   * Click de « USE DEVICE AS CONTROLLER » (mobile solo uniquement) — bascule ce device en manette
+   * d'un autre écran via le scanner QR in-app. Omis (desktop) = l'item n'est pas affiché.
+   */
+  readonly onUseAsController?: () => void;
 }
 
 /** Title text + prompt "CONNECT CONTROLLER" ⇄ "START GAME" (selon l'état pairé), both independently animatable (see `TextLabel`'s `animatableId`). */
@@ -16,6 +21,7 @@ export class TitleMenuPanel extends UIComponent {
   readonly node: Container;
 
   private readonly _prompt: TextLabel;
+  private readonly _useAsController: TextLabel | null;
   private _controllerConnected = false;
 
   private constructor(handlers: TitleMenuPanelHandlers) {
@@ -55,7 +61,26 @@ export class TitleMenuPanel extends UIComponent {
       animatableId: 'connectController',
     });
 
-    this.node.addChild(title.node, this._prompt.node);
+    // Item supplémentaire mobile solo : basculer ce device en manette d'un autre écran. Plus petit
+    // et grisé sous le prompt principal — un chemin secondaire, pas l'action par défaut.
+    if (handlers.onUseAsController !== undefined) {
+      this._useAsController = new TextLabel({
+        text: 'USE DEVICE AS CONTROLLER',
+        style: {
+          fill: 0x666666,
+          fontSize: 22,
+          fontFamily: 'fezbox',
+          align: 'center',
+          letterSpacing: 2,
+        },
+        onClick: handlers.onUseAsController,
+        animatableId: 'useAsController',
+      });
+      this.node.addChild(title.node, this._prompt.node, this._useAsController.node);
+    } else {
+      this._useAsController = null;
+      this.node.addChild(title.node, this._prompt.node);
+    }
   }
 
   /**

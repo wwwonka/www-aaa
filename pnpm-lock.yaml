@@ -29,6 +29,9 @@ importers:
       '@trystero-p2p/mqtt':
         specifier: ^0.25.2
         version: 0.25.2
+      '@trystero-p2p/nostr':
+        specifier: 0.25.2
+        version: 0.25.2
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -38,6 +41,9 @@ importers:
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
+      qr-scanner:
+        specifier: ^1.4.2
+        version: 1.4.2
       qrcode:
         specifier: ^1.5.4
         version: 1.5.4
@@ -48,6 +54,9 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.6.0(jiti@2.7.0))
+      '@playwright/test':
+        specifier: ^1.61.1
+        version: 1.61.1
       '@theatre/studio':
         specifier: ^0.7.2
         version: 0.7.2(@theatre/core@0.7.2)
@@ -198,6 +207,9 @@ packages:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
 
+  '@noble/secp256k1@3.1.0':
+    resolution: {integrity: sha512-+F7iS7tUMaNGXcc9X3PjmjvuQnXEuSjCRNzVVA2xAcKXgCaP0dHYz4SFyt4FKNHef7sOP//xihowcySSS7PK9g==}
+
   '@oxc-project/types@0.137.0':
     resolution: {integrity: sha512-WT+Gb24i8hmvo85AIv2oEYouEXkRlKAlT9WaCa3TfLgNCN+GhrJOGZuIlMouAh38Qe4QOx26eUOVsq70qXrywA==}
 
@@ -220,6 +232,11 @@ packages:
     resolution: {integrity: sha512-HHQtAHxzirfl6bg9HgzyGGLIHqM/q3i0R+raQ9Wmp3VxLJTUviF655Syf9PWYC690xbS9uo0mRkXykoJNkHKhA==}
     peerDependencies:
       pixi.js: ^8.6.2
+
+  '@playwright/test@1.61.1':
+    resolution: {integrity: sha512-8nKv6+0RJSL9FE4jYOEGXnPeM/Hg12qZpmqzZjRh3qM0Y7c3z1mrOTfFLids72RDQYVh9WpLEfR5WdpNX4fkig==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@rolldown/binding-android-arm64@1.1.3':
     resolution: {integrity: sha512-DT6Z3PhvioeHMvxo+xHc3KtqggrI7CCTXCmC2h/5zUlp5jVitv7XEy+9q5/7v8IolhlioawpMo8Kg0EEBy7J0g==}
@@ -336,6 +353,9 @@ packages:
   '@trystero-p2p/mqtt@0.25.2':
     resolution: {integrity: sha512-73FK/OeqLNCvvaJ9zF3++eA7HzL0EcAUcz9LKIhJ7iJkEU6upv5rULcgSLsTZ4641q9/lQKS+jl6P0bG8mFDMg==}
 
+  '@trystero-p2p/nostr@0.25.2':
+    resolution: {integrity: sha512-JTRktpt8VMtKeQuA2h4OmOzMEXq28KuBgL4JyfVatkxiFkFITJo9Q/D5Fx6xqeBT3cCFsfA4oDh4vUpp8SVZhg==}
+
   '@tybys/wasm-util@0.10.3':
     resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
 
@@ -359,6 +379,9 @@ packages:
 
   '@types/node@26.0.1':
     resolution: {integrity: sha512-fc3KiUoBt6kie0N9bIW3E47vZsuaMf0PM2AaUpLCLT0s/LvX1nxAim6Fc049cNxODPpGm6qRAuUOB86SkRuPQw==}
+
+  '@types/offscreencanvas@2019.7.3':
+    resolution: {integrity: sha512-ieXiYmgSRXUDeOntE1InxjWyvEelZGP63M+cGuquuRLuIKKT1osnkXjxev9B7d1nXSug5vpunx+gNlbVxMlC9A==}
 
   '@types/qrcode@1.5.6':
     resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
@@ -716,6 +739,11 @@ packages:
   flatted@3.4.2:
     resolution: {integrity: sha512-PjDse7RzhcPkIJwy5t7KPWQSZ9cAbzQXcafsetQoD7sOJRQlGikNbx7yZp2OotDnJyrDcbyRq3Ttb18iYOqkxA==}
 
+  fsevents@2.3.2:
+    resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
+    engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
+    os: [darwin]
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -1005,6 +1033,16 @@ packages:
   pixi.js@8.19.0:
     resolution: {integrity: sha512-pq1O6emA/GFjjeF+8d3Pb5t7knD8FsnfWGqQcRjYjsqFZ7QdzG1XgjLDUu0DFJRbafjV5+g8iNLFBx0b9649lg==}
 
+  playwright-core@1.61.1:
+    resolution: {integrity: sha512-h7Qlt6m4REp25qvIdvbDtVmD4LqVXfpRxhORv9L0jzETM05p4fuPJ3dKyuSXQxDSbXnmS79HAgi9589lGSpLkg==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.61.1:
+    resolution: {integrity: sha512-DWnY5o3YbLWK4GovuAVwpqL+1VwGNdUGrRr++8j8PtQQzvAVZUIMjKQ90fY689sEJZJBbZVw1rXaOKSTitkzPQ==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   pngjs@5.0.0:
     resolution: {integrity: sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==}
     engines: {node: '>=10.13.0'}
@@ -1035,6 +1073,9 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  qr-scanner@1.4.2:
+    resolution: {integrity: sha512-kV1yQUe2FENvn59tMZW6mOVfpq9mGxGf8l6+EGaXUOd4RBOLg7tRC83OrirM5AtDvZRpdjdlXURsHreAOSPOUw==}
 
   qrcode@1.5.4:
     resolution: {integrity: sha512-1ca71Zgiu6ORjHqFBDpnSMTR2ReToX4l1Au1VFLyVeBTFavzQnv5JxMFr3ukHVKpSrSA2MCk0lNJSykjUfz7Zg==}
@@ -1468,6 +1509,8 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
+  '@noble/secp256k1@3.1.0': {}
+
   '@oxc-project/types@0.137.0': {}
 
   '@pixi/colord@2.9.6': {}
@@ -1497,6 +1540,10 @@ snapshots:
       pixi.js: 8.19.0
       tweedle.js: 2.1.0
       typed-signals: 2.5.0
+
+  '@playwright/test@1.61.1':
+    dependencies:
+      playwright: 1.61.1
 
   '@rolldown/binding-android-arm64@1.1.3':
     optional: true
@@ -1573,6 +1620,11 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@trystero-p2p/nostr@0.25.2':
+    dependencies:
+      '@noble/secp256k1': 3.1.0
+      '@trystero-p2p/core': 0.25.2
+
   '@tybys/wasm-util@0.10.3':
     dependencies:
       tslib: 2.8.1
@@ -1593,6 +1645,8 @@ snapshots:
   '@types/node@26.0.1':
     dependencies:
       undici-types: 8.3.0
+
+  '@types/offscreencanvas@2019.7.3': {}
 
   '@types/qrcode@1.5.6':
     dependencies:
@@ -1987,6 +2041,9 @@ snapshots:
 
   flatted@3.4.2: {}
 
+  fsevents@2.3.2:
+    optional: true
+
   fsevents@2.3.3:
     optional: true
 
@@ -2248,6 +2305,14 @@ snapshots:
       parse-svg-path: 0.2.0
       tiny-lru: 11.4.7
 
+  playwright-core@1.61.1: {}
+
+  playwright@1.61.1:
+    dependencies:
+      playwright-core: 1.61.1
+    optionalDependencies:
+      fsevents: 2.3.2
+
   pngjs@5.0.0: {}
 
   postcss@8.5.16:
@@ -2271,6 +2336,10 @@ snapshots:
       signal-exit: 3.0.7
 
   punycode@2.3.1: {}
+
+  qr-scanner@1.4.2:
+    dependencies:
+      '@types/offscreencanvas': 2019.7.3
 
   qrcode@1.5.4:
     dependencies:

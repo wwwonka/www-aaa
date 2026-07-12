@@ -1,0 +1,12 @@
+name = "turn-credentials"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Origine autorisée pour le fetch navigateur (CORS). Mettre l'origine de l'app en prod ;
+# "*" convient en dev.
+[vars]
+ALLOW_ORIGIN = "*"
+
+# Secrets — NE PAS committer, poser via wrangler :
+#   wrangler secret put TURN_TOKEN_ID
+#   wrangler secret put TURN_API_TOKEN

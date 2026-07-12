@@ -1,0 +1,9 @@
+{
+  "cssTheme": "Cupertino",
+  "showRibbon": false,
+  "accentColor": "#3d6ca9",
+  "showViewHeader": true,
+  "textFontFamily": "New Athena Unicode",
+  "baseFontSize": 16,
+  "translucency": true
+}

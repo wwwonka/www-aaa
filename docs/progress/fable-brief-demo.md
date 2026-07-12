@@ -92,8 +92,8 @@
 >   `?dev` nominal → tier=high, SimulationWorker dédié, comportement inchangé ; zéro erreur.
 >   **Seuils (30k/12k ops/ms) calibrés desktop uniquement — à recalibrer sur vrais devices.**
 >
-> **Prochaine étape : Étape 5b — joysticks + transport RTC** (la 5a et la conception complète
-> sont faites, voir ci-dessus et `docs/progress/design-etapes-5-6.md` §A). Puis étape 6 (handoff).
+> **Prochaine étape : Étape 7 — asset caching réel + DX finale** (section 8), plus le
+> test des étapes 5b/6 sur vrais devices (iPhone + desktop) par l'utilisateur.
 > Le playbook CLAUDE.md §15 s'applique : critique d'architecture + validation utilisateur
 > AVANT d'implémenter.
 >
@@ -106,6 +106,61 @@
 >   prod. Vérifié Chrome : workers `?dev` (title → START → WASD déplace cible+flock, caisse
 >   poussée, zéro erreur) et `?monolith` (cible (0,0)→(−10,−10) en 2 s de S+A). Reste 5b :
 >   joysticks + transport RTC.
+>
+> - **Étape 5b** (2026-07-09) — **Transport joysticks → sim** (§A.2/A.3/A.6 du design ; les
+>   `VirtualStick` de `GamepadScreen` et `stickReducer` existaient déjà) : `input/inputCodec.ts`
+>   (encode/décode 6 octets LE int16×2+uint16 seq, `INPUT_PAYLOAD_BYTES`/`INPUT_AXIS_QUANT`
+>   dans `shared/constants.ts`, tampons réutilisés zéro-alloc), `pairingHost` câble les deux
+>   sens — proxy `setPairingActions.sendInput` (encode + envoi au peer pairé, no-op sinon) et
+>   callback `onInput` (filtre peer pairé → décode → `onRemoteAxes` fourni par AppHost =
+>   `writeAxes` sur le SAB de contrôle, receiver only). Cas limites §A.6 : axes remis à zéro
+>   sur `onPeerLost` du peer pairé ET à la sortie d'`IN_GAME` (AppHost). Corrections au
+>   passage : `GamepadScreen` enregistré pour `TITLE_SCREEN` **et** `IN_GAME` côté controller
+>   (sinon les joysticks mouraient au START — écran noir), log DEV du room code au boot
+>   receiver (test 2 onglets sans scanner le QR), `docs/**` ignoré par ESLint (les plugins
+>   Obsidian pollués par vite-checker). Vérifié Chrome headless 2 onglets (mode workers,
+>   vrais clics CDP `click_at`) : pairing → START croisé → stick gauche tenu = le flock
+>   traverse l'arène et pousse les caisses, relâché = arrêt, onglet controller tué en plein
+>   hold = arrêt (peer lost) ; `?dev` clavier intact ; tsc+eslint+build prod verts, zéro
+>   erreur console. **Piège découvert** : le daemon chrome-devtools lancé depuis le shell
+>   sandboxé hérite du blocage des ports non-443 → les relays MQTT (8084/8884) échouent ;
+>   relancer le daemon hors sandbox.
+>
+> - **Étape 6a** (2026-07-09) — **Snapshot round-trip local** (§B.3/B.4) : `PhysicsEngine`
+>   gagne `readQTransform`/`readAngularVelocity`/`restoreBody` (Set batch → resynchro body
+>   buffer immédiate, piège C.2), codec binaire dans **`src/sim/snapshot.ts`** (layout §B.3
+>   versionné, constantes `SNAPSHOT_*` dans `shared/constants.ts`, 1060 octets pour 24 boids
+>   + 5 props — GameSim restait sous les 300 lignes en déléguant via `SimSnapshotState`).
+>   `GameSim.captureSnapshot/restoreSnapshot` : vitesses physiques (pas les dérivées), au
+>   restore `prevPositions = pos - vel·dt` (piège §B.4 anti-hoquet), `targetPosition`
+>   in-place (SAB), `writeMatrices()` immédiat. Surface Comlink `capture()`/`restore()`
+>   (transfert, pas copie) sur les deux topologies (worker dédié + `simCapture`/`simRestore`
+>   du worker fusionné), façade `simControl` étendue. Touches DEV C/R
+>   (`attachSnapshotDevKeys`) en `?dev` et monolith. Vérifié : capture → 2 s de fuite →
+>   restore = état pixel-identique (workers) et cible restaurée à l'exact (monolith).
+>
+> - **Étape 6b** (2026-07-09) — **Handoff bidirectionnel** (§B.1/B.2/B.5) : actions Trystero
+>   `hoReq`/`hoState`/`hoAck` (PairingChannel + types), **`src/app/HandoffCoordinator.ts`**
+>   (FSM ACTIVE→CAPTURING→AWAITING_ACK→PASSIVE / PASSIVE→RESTORING→ACTIVE, orthogonale au
+>   rôle ; stop AVANT capture, autorité cédée à l'ACK seulement, timeout 5 s + rollback,
+>   hoReq croisés ignorés hors ACTIVE, garde IN_GAME ; peer perdu en PASSIVE côté receiver =
+>   reprise locale au dernier état — pas d'écran mort). AppHost : SAB de contrôle + sim
+>   init sur **les deux rôles** (seule l'autorité `start()`, garde `isActive()` dans le
+>   subscribe), événement `REQUEST_HANDOFF` (UI → FSM, jamais l'orchestrateur — c'est la FSM
+>   qui émet `TRANSFER`/`TRANSFER_BACK`). pairingHost : senders/callbacks handoff filtrés
+>   par peer pairé + switch d'autorité du sampler §B.5 (sticks → SAB local quand ACTIVE,
+>   sinon RTC — un seul chemin d'écriture). UI : `VirtualStick` extrait en composant,
+>   GamepadScreen gagne « PLAY HERE » (pairé) + `setGameMode` (fond effacé quand autorité,
+>   le jeu local apparaît sous les sticks), nouvel écran `PlayingOnPhoneScreen`
+>   (« BRING IT BACK ») pour `PLAYING_ON_PHONE` ; fix transverse : labels sortis du flux
+>   Yoga (`layout = null`) — corrige aussi le START qui dérivait à droite depuis l'étape 2.
+>   Vérifié Chrome 2 onglets (workers, tier high) : 2 cycles aller/retour complets sans
+>   flash ni réinit WebGL, état continu (caisses poussées sur le phone retrouvées déplacées
+>   au retour), joysticks pilotent la sim locale du phone quand il est autorité, onglet
+>   controller tué pendant PLAYING_ON_PHONE → toast « CONTROLLER LOST — RESUMING HERE » +
+>   reprise auto (<12 s, délai Trystero compris), zéro erreur console. Non couvert par le
+>   test auto : fenêtre AWAITING_ACK exacte (<1 s — même chemin `rollbackToActive` que le
+>   timeout), tier low, vrais devices.
 >
 > **La conception complète des étapes 5 et 6 est déjà faite et validée** (2026-07-07) :
 > `docs/progress/design-etapes-5-6.md` — pipeline input (SAB de contrôle, transport binaire,

@@ -32,8 +32,11 @@ function detectPlatform(ua: string, runtime: RuntimeCategory): DevicePlatform {
 }
 
 function roleFromPlatform(platform: DevicePlatform): DeviceRole {
-  if (platform === 'mobile') return 'controller';
-  if (platform === 'desktop') return 'receiver';
+  // Mobile en URL de base = un receiver « self-controlled » : il affiche le jeu ET se pilote avec
+  // ses joysticks tactiles locaux (voir `selfControlled` dans AppHost). Il ne devient controller
+  // QUE via un flag explicite (`?controller` / `?r=` d'un QR scanné) — jamais par simple UA, sinon
+  // tout mobile sauterait en pairing plein écran au boot (bug corrigé).
+  if (platform === 'mobile' || platform === 'desktop') return 'receiver';
   return (localStorage.getItem(ROLE_KEY) as DeviceRole | null) ?? 'unknown';
 }
 

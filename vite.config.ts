@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import path from 'node:path';
 import fs from 'node:fs';
 import viteOpenLocalIpPlugin from './_dev/vite-open-local-ip-plugin';
+import viteCertInstallPlugin from './_dev/vite-cert-install-plugin';
 import htmlIncludePlugin from './_dev/vite-html-include-plugin.ts';
 import { ViteMinifyPlugin } from 'vite-plugin-minify';
 import minifyManifestPlugin from './_dev/vite-minify-manifest-plugin.ts';
@@ -27,6 +28,7 @@ export default defineConfig({
   plugins: [
     htmlIncludePlugin(),
     viteOpenLocalIpPlugin(),
+    viteCertInstallPlugin(),
     ViteMinifyPlugin(),
     minifyManifestPlugin(),
     bundleSizePlugin(),

@@ -62,7 +62,7 @@ export interface AssetsManagerApi extends SystemLifecycle {
    * (or the inline factory, depending on `SystemAllocator`'s decision).
    *
    * @param onEvent - optional progress callback, defaults to a no-op
-   * @see docs/system-allocator.md
+   * @see docs/architecture/system-allocator.md
    */
   startUp(onEvent?: (event: AssetLoadEvent) => void): Promise<void>;
   /** No-op today — AssetsManager holds no open connection/timer to release. Kept honest with {@link SystemLifecycle}. */

@@ -8,7 +8,9 @@ import { DebugOverlay } from '../overlay/DebugOverlay';
 import { setupDevTools } from '../setup';
 import { createGameSim } from '../../sim/GameSim';
 import type { GameSim } from '../../sim/GameSim';
-import { attachKeyboardSimControls } from './simControls';
+import { createControlSAB } from '../../core/sab-manager';
+import { writeAxes } from '../../input/controlChannel';
+import { attachKeyboardSimControls, attachSnapshotDevKeys } from './simControls';
 
 // TODO: Les méthodes debug (scene, resize, setVisibility, attachDebugOverlay, etc.)
 // seront rajoutées à RenderManager quand on implémente le debug tooling complet.
@@ -103,7 +105,9 @@ export async function startMonolithMode(): Promise<void> {
   // Étape 3 (validation monolith) : la sim boids+Havok tourne sur le main thread, steppée
   // depuis la boucle de rendu. Le wasm Havok se précharge pendant le Title Screen pour que
   // PLAY soit instantané. En workers, ce câblage vivra dans simulation.worker.ts (étape 4).
-  const simPromise = createGameSim();
+  // Même pipeline d'input que le mode workers (SAB + dispatcher), simplement in-process.
+  const controlView = new Int32Array(createControlSAB());
+  const simPromise = createGameSim(controlView);
   let sim: GameSim | null = null;
   let currentState = '';
 
@@ -132,7 +136,15 @@ export async function startMonolithMode(): Promise<void> {
           propMatrices: created.propMatrices,
           targetPosition: created.targetPosition,
         });
-        attachKeyboardSimControls((x, z) => created.setMoveInput(x, z));
+        attachKeyboardSimControls((x, z) => writeAxes(controlView, x, z));
+        // C/R : round-trip de snapshot in-process (mêmes fonctions que la surface Comlink).
+        attachSnapshotDevKeys(
+          () => Promise.resolve(created.captureSnapshot()),
+          (buf) => {
+            created.restoreSnapshot(buf);
+            return Promise.resolve();
+          },
+        );
       });
     }
   });
