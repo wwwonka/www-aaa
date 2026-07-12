@@ -5,9 +5,9 @@
  */
 export function toggleFullscreen(): void {
   if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen()
+    void document.documentElement.requestFullscreen();
   } else {
-    document.exitFullscreen()
+    void document.exitFullscreen();
   }
 }
 
@@ -17,9 +17,9 @@ export function toggleFullscreen(): void {
  */
 export function setupFullscreenHandler(): void {
   document.addEventListener('keydown', (e) => {
-    if (e.key !== 'f' && e.key !== 'F') return
-    if (e.ctrlKey || e.metaKey || e.altKey) return
+    if (e.key !== 'f' && e.key !== 'F') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-    toggleFullscreen()
-  })
+    toggleFullscreen();
+  });
 }

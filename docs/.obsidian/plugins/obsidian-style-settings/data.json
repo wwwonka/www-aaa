@@ -1,0 +1,10 @@
+{
+  "cupertino@@colorful-frame": true,
+  "cupertino@@adaptive-mode-off": false,
+  "cupertino@@tab-floating": false,
+  "cupertino@@hover-ribbon": true,
+  "cupertino@@hover-sidedock": true,
+  "cupertino@@focus-view": true,
+  "cupertino@@reduce-contrast-change": true,
+  "cupertino@@icon-size-modifier": 0
+}

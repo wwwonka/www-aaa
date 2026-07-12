@@ -1,46 +1,58 @@
 <!doctype html>
 <html lang="en" translate="no">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/svg+xml" href="/app/icons/favicon.svg" />
-  <meta name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
-  <!-- Suppresses Chrome's "Translate this page?" prompt — translate="no" plus
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/app/icons/favicon.svg" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no"
+    />
+    <!-- Suppresses Chrome's "Translate this page?" prompt — translate="no" plus
        this google-specific meta tag are the two signals Chrome's translate
        heuristic actually respects; lang="en" alone isn't enough to stop it
        from offering a translation when the browser's UI language differs. -->
-  <meta name="google" content="notranslate" />
-  
-  <title>Game Architecture</title>
-  <!-- @include src/app/meta/invisible-title.html -->
+    <meta name="google" content="notranslate" />
 
-  <!-- @include src/app/meta/pwa-meta.html -->
+    <title>Game Architecture</title>
+    <!-- @include src/app/meta/invisible-title.html -->
 
-  <!-- @include src/app/meta/ios-meta.html -->
+    <!-- @include src/app/meta/pwa-meta.html -->
 
-  <!-- @include src/app/meta/ios-splash-screens.html -->
+    <!-- @include src/app/meta/ios-meta.html -->
 
-  <style>
-    * { 
-      margin: 0; 
-      padding: 0; 
-      box-sizing: border-box; 
-    }
-    body { 
-      min-width: 400px;
-      min-height: 300px;
-      background: #000;  
-      overflow: hidden; }
-    #canvas { 
-      display: block; 
-      width: 100dvw; 
-      height: 100dvh; 
-      touch-action: none; 
-    }
-    
-  </style>
-  <!-- THIS WAS A HACK TO PREVENT THE FLASHING DURING RESIZE BUT TURNED OUT TO BE NOT SO EFFECTIVE...|
+    <!-- @include src/app/meta/ios-splash-screens.html -->
+
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        min-width: 400px;
+        min-height: 300px;
+        background: #000;
+        overflow: hidden;
+      }
+      /* iOS : couper la sélection de texte + le callout au long-press (la « loupe ») et le flash
+         de tap. Sans -webkit-touch-callout:none, un appui long sur le canvas fait apparaître la
+         loupe de sélection. touch-action:none tue déjà le double-tap-zoom. */
+      html,
+      body,
+      #canvas {
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #canvas {
+        display: block;
+        width: 100dvw;
+        height: 100dvh;
+        touch-action: none;
+      }
+    </style>
+    <!-- THIS WAS A HACK TO PREVENT THE FLASHING DURING RESIZE BUT TURNED OUT TO BE NOT SO EFFECTIVE...|
     <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; overflow: hidden; }
@@ -51,11 +63,10 @@
       height: calc(100vh + 10px);
     }
   </style> -->
-</head>
+  </head>
 
-<body>
-  <canvas id="canvas"></canvas>
-  <script type="module" src="/src/main.ts"></script>
-</body>
-
+  <body>
+    <canvas id="canvas"></canvas>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>

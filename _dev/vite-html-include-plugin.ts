@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import path              from 'node:path'
-import type { Plugin }   from 'vite'
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import type { Plugin } from 'vite';
 
-const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const INCLUDE_RE = /<!--\s*@include\s+(\S+)\s*-->/g
+const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const INCLUDE_RE = /<!--\s*@include\s+(\S+)\s*-->/g;
 
 // Lets index.html pull meta-tag blocks out of separate files (see
 // src/app/meta/), purely so the head doesn't read as one giant wall of
@@ -16,17 +16,17 @@ const INCLUDE_RE = /<!--\s*@include\s+(\S+)\s*-->/g
 // fragment can itself `@include` another fragment.
 function resolveIncludes(html: string, fromDir: string): string {
   return html.replace(INCLUDE_RE, (_match, relPath: string) => {
-    const filePath = path.join(fromDir, relPath)
-    const fragment = readFileSync(filePath, 'utf-8')
-    return resolveIncludes(fragment, path.dirname(filePath))
-  })
+    const filePath = path.join(fromDir, relPath);
+    const fragment = readFileSync(filePath, 'utf-8');
+    return resolveIncludes(fragment, path.dirname(filePath));
+  });
 }
 
 export default function htmlIncludePlugin(): Plugin {
   return {
     name: 'vite-html-include-plugin',
     transformIndexHtml(html) {
-      return resolveIncludes(html, ROOT)
+      return resolveIncludes(html, ROOT);
     },
-  }
+  };
 }

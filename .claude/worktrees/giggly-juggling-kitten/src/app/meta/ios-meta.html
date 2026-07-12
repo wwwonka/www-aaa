@@ -1,0 +1,19 @@
+    <!-- iOS PWA meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <!--
+      black-translucent extends content behind the status bar (pairs with
+      viewport-fit=cover + safe-area-inset env() in CSS for notch devices).
+      Use "default" or "black" if you want an opaque bar with no bleed.
+    -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Controls" />
+    <!--
+      iOS ignores SVG for the home-screen touch icon.
+      Add a 180×180 PNG at /apple-touch-icon.png and Safari picks it up
+      automatically (no <link> needed). The <link> below is a fallback for
+      older iOS or non-default paths.
+    -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Disable automatic detection of phone numbers / addresses on iOS -->
+    <meta name="format-detection" content="telephone=no, address=no, email=no" />

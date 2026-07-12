@@ -1,7 +1,7 @@
 // '+'/'-'/'=' block Ctrl/Cmd +/- page zoom — '=' is the physical key '+'
 // sits on without Shift on most layouts, and is what e.key actually reports
 // for Ctrl/Cmd+Plus on many keyboards/browsers, so both need blocking.
-const BLOCKED_KEYS = new Set(['a', 's', 'p', 'n', 'f', 'g', 'd', '+', '-', '='])
+const BLOCKED_KEYS = new Set(['a', 's', 'p', 'n', 'f', 'g', 'd', '+', '-', '=']);
 
 /**
  * Blocks browser keyboard shortcuts that would interfere with the game
@@ -10,7 +10,7 @@ const BLOCKED_KEYS = new Set(['a', 's', 'p', 'n', 'f', 'g', 'd', '+', '-', '='])
 export function disableKeyboardShortcuts(): void {
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && BLOCKED_KEYS.has(e.key.toLowerCase())) {
-      e.preventDefault()
+      e.preventDefault();
     }
-  })
+  });
 }

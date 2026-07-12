@@ -1,8 +1,8 @@
-import type { RuntimeCategory } from '../runtimeDetect'
-import { setupDblclickFullscreen } from './AppWindowFullscreen'
-import { setupWindowDrag }         from './desktop-chromium/AppWindowDrag'
-import { setupWindowPinch }        from './desktop-chromium/AppWindowPinch'
-import { setupPreventPageZoom }    from './desktop-chromium/preventPageZoom'
+import type { RuntimeCategory } from '../runtimeDetect';
+import { setupDblclickFullscreen } from './AppWindowFullscreen';
+import { setupWindowDrag } from './desktop-chromium/AppWindowDrag';
+import { setupWindowPinch } from './desktop-chromium/AppWindowPinch';
+import { setupPreventPageZoom } from './desktop-chromium/preventPageZoom';
 
 /**
  * Câble les comportements « chrome de fenêtre » selon le runtime détecté :
@@ -21,12 +21,12 @@ export function setupPwaExperience(runtime: RuntimeCategory, isOverGameUI: () =>
   const isDesktopPwa =
     runtime === 'pwa-desktop-chromium' ||
     runtime === 'pwa-desktop-firefox' ||
-    runtime === 'pwa-desktop-safari'
+    runtime === 'pwa-desktop-safari';
 
-  if (isDesktopPwa) setupDblclickFullscreen(isOverGameUI)
+  if (isDesktopPwa) setupDblclickFullscreen(isOverGameUI);
   if (runtime === 'pwa-desktop-chromium') {
-    setupPreventPageZoom()
-    setupWindowDrag()
-    setupWindowPinch()
+    setupPreventPageZoom();
+    setupWindowDrag();
+    setupWindowPinch();
   }
 }

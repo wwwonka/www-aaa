@@ -5,13 +5,16 @@
  * casserait l'analyse statique de Vite sur le pattern `new URL(..., import.meta.url)` utilisé
  * par `AppHost.ts` pour le chunking).
  *
- * Remplace l'ancien `assetsManager.worker.ts` codé en dur — voir `docs/system-allocator.md`.
+ * Remplace l'ancien `assetsManager.worker.ts` codé en dur — voir `docs/architecture/system-allocator.md`.
  */
-import * as Comlink from 'comlink'
-import { systemFactories, type SystemId } from './systems/registry'
-import type { SystemLifecycle } from './systems/SystemLifecycle'
+// En premier — doit être évalué avant tout autre import pour attraper leurs erreurs d'évaluation
+// (no-op en prod, voir le fichier).
+import '../_dev/workerErrorRelay';
+import * as Comlink from 'comlink';
+import { systemFactories, type SystemId } from './systems/registry';
+import type { SystemLifecycle } from './systems/SystemLifecycle';
 
-const instances = new Map<SystemId, SystemLifecycle>()
+const instances = new Map<SystemId, SystemLifecycle>();
 
 /**
  * Instancie (lazy, mis en cache) puis retourne le système demandé.
@@ -22,9 +25,9 @@ const instances = new Map<SystemId, SystemLifecycle>()
  * async seraient perdues au structured clone au lieu de rester appelables à distance.
  */
 function get(id: SystemId): SystemLifecycle {
-  if (!instances.has(id)) instances.set(id, systemFactories[id]())
-  return Comlink.proxy(instances.get(id)!)
+  if (!instances.has(id)) instances.set(id, systemFactories[id]());
+  return Comlink.proxy(instances.get(id)!);
 }
 
-export type SystemHostApi = { get: typeof get }
-Comlink.expose({ get })
+export type SystemHostApi = { get: typeof get };
+Comlink.expose({ get });

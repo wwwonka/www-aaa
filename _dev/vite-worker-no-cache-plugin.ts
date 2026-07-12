@@ -1,4 +1,4 @@
-import type { Plugin } from 'vite'
+import type { Plugin } from 'vite';
 
 /**
  * Safari (WebKit) ne réapplique pas les en-têtes Cross-Origin-Resource-Policy/COEP sur les
@@ -19,11 +19,24 @@ export default function workerNoCachePlugin(): Plugin {
     name: 'worker-no-cache',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (req.url && /\.worker\.[jt]s(\?|$)|worker_file/.test(req.url)) {
-          res.setHeader('Cache-Control', 'no-store')
+        // WebKit perd les en-têtes COEP/CORP sur les 304 pour TOUT script chargé dans un
+        // contexte COEP (pas seulement les fichiers worker) — les imports profonds d'un module
+        // worker (ex: les ~1400 modules Babylon en dev) sont refusés pareil au cache hit.
+        // Poser `Cache-Control: no-store` ne suffit plus (le middleware transform de Vite
+        // réécrit l'en-tête en `no-cache` au send) : on supprime les validateurs conditionnels
+        // de la requête — sans eux aucun 304 n'est possible, Vite renvoie toujours un 200
+        // complet avec les en-têtes. Scopé aux UA WebKit/Safari pour garder les 304 ailleurs.
+        const ua = req.headers['user-agent'] ?? '';
+        const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
+        const isWorkerFile = req.url && /\.worker\.[jt]s(\?|$)|worker_file/.test(req.url);
+        const isModule = req.url && /\.([jt]s|mjs)($|\?)/.test(req.url);
+        if (isWorkerFile || (isSafari && isModule)) {
+          delete req.headers['if-none-match'];
+          delete req.headers['if-modified-since'];
+          res.setHeader('Cache-Control', 'no-store');
         }
-        next()
-      })
+        next();
+      });
     },
-  }
+  };
 }

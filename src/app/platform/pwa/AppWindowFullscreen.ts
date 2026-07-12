@@ -1,4 +1,4 @@
-import { toggleFullscreen } from '../../events/fullscreenHandler'
+import { toggleFullscreen } from '../../events/fullscreenHandler';
 
 // Double-clic → bascule le plein écran, sur toutes les PWA desktop (chromium/firefox/safari).
 // `requestFullscreen()` exige d'être appelé synchroniquement dans le geste utilisateur, donc
@@ -14,13 +14,13 @@ import { toggleFullscreen } from '../../events/fullscreenHandler'
 // Retourne un `dispose()` pour un tear-down propre, en symétrie avec les autres handlers.
 export function setupDblclickFullscreen(isOverGameUI: () => boolean): () => void {
   const onDblClick = () => {
-    if (isOverGameUI()) return
-    toggleFullscreen()
-  }
+    if (isOverGameUI()) return;
+    toggleFullscreen();
+  };
 
-  document.addEventListener('dblclick', onDblClick)
+  document.addEventListener('dblclick', onDblClick);
 
   return function dispose() {
-    document.removeEventListener('dblclick', onDblClick)
-  }
+    document.removeEventListener('dblclick', onDblClick);
+  };
 }

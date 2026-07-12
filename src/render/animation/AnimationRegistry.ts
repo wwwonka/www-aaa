@@ -1,6 +1,6 @@
-type Setter = (value: number) => void
+type Setter = (value: number) => void;
 
-const targets = new Map<string, Setter>()
+const targets = new Map<string, Setter>();
 
 /**
  * Registers a settable target under `id` — screens/components call this once at construction.
@@ -9,7 +9,7 @@ const targets = new Map<string, Setter>()
  * @param setter - Applies an incoming numeric value to the underlying property.
  */
 export function registerAnimatable(id: string, setter: Setter): void {
-  targets.set(id, setter)
+  targets.set(id, setter);
 }
 
 /**
@@ -20,5 +20,5 @@ export function registerAnimatable(id: string, setter: Setter): void {
  * @param value - The value to apply.
  */
 export function applyAnimatedValue(id: string, value: number): void {
-  targets.get(id)?.(value)
+  targets.get(id)?.(value);
 }

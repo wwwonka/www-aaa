@@ -1,56 +1,55 @@
-    <!-- iOS PWA meta -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <!--
+<!-- iOS PWA meta -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<!--
       black-translucent extends content behind the status bar (pairs with
       viewport-fit=cover + safe-area-inset env() in CSS for notch devices).
       Use "default" or "black" if you want an opaque bar with no bleed.
     -->
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Controls" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Controls" />
 
 <!-- ——— ICÔNES HOME SCREEN ——— -->
-    <!-- Icônes pour l'écran d'accueil iOS. Apple applique automatiquement
+<!-- Icônes pour l'écran d'accueil iOS. Apple applique automatiquement
          les coins arrondis et le reflet (sauf avec -precomposed). -->
-         
-         <!--
+
+<!--
            iOS ignores SVG for the home-screen touch icon.
            Add a 180×180 PNG at /apple-touch-icon.png and Safari picks it up
            automatically (no <link> needed). The <link> below is a fallback for
            older iOS or non-default paths.
          -->
-    
-    <!-- Tailles courantes. iOS choisit la plus adaptée à l'appareil. -->
-    <!-- <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png"> <!-- iPhone Retina -->
-    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png"> <!-- iPad Pro -->
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png"> <!-- iPad Retina -->
-    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.png"> <!-- iPhone -->
-    
-    <!-- -precomposed : empêche iOS d'ajouter son effet de brillance par-dessus
+
+<!-- Tailles courantes. iOS choisit la plus adaptée à l'appareil. -->
+<!-- <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.png"> <!-- iPhone Retina -->
+<link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.png" />
+<!-- iPad Pro -->
+<link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+<!-- iPad Retina -->
+<link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.png" />
+<!-- iPhone -->
+
+<!-- -precomposed : empêche iOS d'ajouter son effet de brillance par-dessus
          (obsolète depuis iOS 7 mais encore supporté pour rétrocompatibilité) -->
-    <!-- <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180.png"> -->
+<!-- <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180.png"> -->
 
-    
+<!-- Disable automatic detection of phone numbers / addresses on iOS -->
+<meta name="format-detection" content="telephone=no, address=no, email=no" />
 
-    <!-- Disable automatic detection of phone numbers / addresses on iOS -->
-    <meta name="format-detection" content="telephone=no, address=no, email=no" />
-    
-    <!-- ——— SAFARI PINNED TAB (macOS) ——— -->
-    <!-- Icône SVG monochrome affichée dans les onglets épinglés de Safari macOS.
+<!-- ——— SAFARI PINNED TAB (macOS) ——— -->
+<!-- Icône SVG monochrome affichée dans les onglets épinglés de Safari macOS.
          Doit être un SVG simple, une seule couleur, sur fond transparent.
          "color" définit la teinte appliquée à l'icône quand l'onglet est actif. -->
-    <!-- <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#FF4500">
+<!-- <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#FF4500">
 
 <!-- ——— APPLE PAY (si applicable) ——— -->
-    <!-- Indique que le site supporte Apple Pay. Safari affiche alors le bouton Apple Pay
+<!-- Indique que le site supporte Apple Pay. Safari affiche alors le bouton Apple Pay
          dans les formulaires de paiement via l'API Payment Request. -->
-    <!-- <meta name="apple-pay-capabilities" content="yes"> -->
-    
-    <!-- ——— HANDOFF / UNIVERSAL LINKS ——— -->
-    <!-- Pas un meta tag mais souvent oublié : pour que le Handoff fonctionne
+<!-- <meta name="apple-pay-capabilities" content="yes"> -->
+
+<!-- ——— HANDOFF / UNIVERSAL LINKS ——— -->
+<!-- Pas un meta tag mais souvent oublié : pour que le Handoff fonctionne
          (continuer la navigation de Safari iOS vers macOS et vice-versa),
          il faut un fichier apple-app-site-association à la racine du serveur : -->
-    <!-- https://example.com/.well-known/apple-app-site-association -->
-    <!-- Ce fichier JSON lie votre domaine à votre app et active aussi les Universal Links
+<!-- https://example.com/.well-known/apple-app-site-association -->
+<!-- Ce fichier JSON lie votre domaine à votre app et active aussi les Universal Links
          (les liens web qui ouvrent directement l'app si installée). -->
-    
-

@@ -1,5 +1,5 @@
-import { registerLoader } from '../registry'
-import type { IResourceLoader } from '../types'
+import { registerLoader } from '../registry';
+import type { ResourceLoader } from '../types';
 
 /**
  * Loads a font file into a ready `FontFace`. `FontFace` itself is available in a worker, but
@@ -8,12 +8,12 @@ import type { IResourceLoader } from '../types'
  * `FontFace`; registering it against the active font set is left to the caller, on the main
  * thread, out of scope for this module.
  */
-const fontLoader: IResourceLoader<FontFace> = {
+const fontLoader: ResourceLoader<FontFace> = {
   async parse(blob, path) {
-    const name = path.slice(path.lastIndexOf('/') + 1, path.lastIndexOf('.'))
-    const font = new FontFace(name, await blob.arrayBuffer())
-    return font.load()
+    const name = path.slice(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
+    const font = new FontFace(name, await blob.arrayBuffer());
+    return font.load();
   },
-}
+};
 
-registerLoader(['otf', 'ttf', 'woff', 'woff2'], 'font', fontLoader)
+registerLoader(['otf', 'ttf', 'woff', 'woff2'], 'font', fontLoader);

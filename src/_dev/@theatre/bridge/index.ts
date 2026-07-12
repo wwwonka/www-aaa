@@ -1,8 +1,8 @@
-import { getProject, types } from '@theatre/core'
-import type { AppOrchestrator } from '../../../core/AppOrchestrator'
-import { initStudio } from '../studio'
-import { scenarios } from '../scenarios/_index'
-import type { AnimationObject } from '../scenarios/types'
+import { getProject, types } from '@theatre/core';
+import type { AppOrchestrator } from '../../../core/AppOrchestrator';
+import { initStudio } from '../studio';
+import { scenarios } from '../scenarios/_index';
+import type { AnimationObject } from '../scenarios/types';
 
 /**
  * Shared transform props every animatable object gets in Studio by default — mirrors
@@ -11,13 +11,13 @@ import type { AnimationObject } from '../scenarios/types'
  * there, ready to scrub, without declaring anything per-object.
  */
 const DEFAULT_TRANSFORM_PROPS = {
-  opacity:  types.number(1, { range: [0, 1] }),
-  x:        types.number(0, { range: [-2000, 2000] }),
-  y:        types.number(0, { range: [-2000, 2000] }),
-  scaleX:   types.number(1, { range: [0, 4] }),
-  scaleY:   types.number(1, { range: [0, 4] }),
+  opacity: types.number(1, { range: [0, 1] }),
+  x: types.number(0, { range: [-2000, 2000] }),
+  y: types.number(0, { range: [-2000, 2000] }),
+  scaleX: types.number(1, { range: [0, 4] }),
+  scaleY: types.number(1, { range: [0, 4] }),
   rotation: types.number(0, { range: [-Math.PI, Math.PI] }),
-}
+};
 
 /**
  * Builds Theatre object props: the shared default set, overridden per-key by whatever a scenario explicitly declares.
@@ -25,14 +25,16 @@ const DEFAULT_TRANSFORM_PROPS = {
  * @param object - Scenario object descriptor (may override a subset of {@link DEFAULT_TRANSFORM_PROPS}).
  * @returns Props to pass to `sheet.object(objectKey, props)`.
  */
-function buildProps(object: AnimationObject): Record<string, ReturnType<typeof types.number> | number> {
+function buildProps(
+  object: AnimationObject,
+): Record<string, ReturnType<typeof types.number> | number> {
   const overrides = Object.fromEntries(
     Object.entries(object.defaults ?? {}).map(([key, value]) => {
-      const range = object.ranges?.[key]
-      return [key, range ? types.number(value, { range: [...range] }) : value]
+      const range = object.ranges?.[key];
+      return [key, range ? types.number(value, { range: [...range] }) : value];
     }),
-  )
-  return { ...DEFAULT_TRANSFORM_PROPS, ...overrides }
+  );
+  return { ...DEFAULT_TRANSFORM_PROPS, ...overrides };
 }
 
 /**
@@ -51,22 +53,23 @@ export function setupTheatreBridge(
   orchestrator: AppOrchestrator,
   applyAnimatedValue: (id: string, value: number) => void,
 ): void {
-  initStudio()
+  initStudio();
 
-  const project = getProject('GameUI')
+  const project = getProject('GameUI');
 
   for (const scenario of scenarios) {
-    const sheet = project.sheet(scenario.sheetName)
+    const sheet = project.sheet(scenario.sheetName);
     for (const object of scenario.objects) {
-      const theatreObject = sheet.object(object.objectKey, buildProps(object))
-      theatreObject.onValuesChange(values => {
-        for (const [prop, value] of Object.entries(values)) applyAnimatedValue(`${object.objectKey}.${prop}`, value)
-      })
+      const theatreObject = sheet.object(object.objectKey, buildProps(object));
+      theatreObject.onValuesChange((values) => {
+        for (const [prop, value] of Object.entries(values))
+          applyAnimatedValue(`${object.objectKey}.${prop}`, value);
+      });
     }
   }
 
-  orchestrator.subscribe(snapshot => {
-    const scenario = scenarios.find(s => s.triggerState === snapshot.value)
-    if (scenario) project.sheet(scenario.sheetName).sequence.play()
-  })
+  orchestrator.subscribe((snapshot) => {
+    const scenario = scenarios.find((s) => s.triggerState === snapshot.value);
+    if (scenario) void project.sheet(scenario.sheetName).sequence.play();
+  });
 }
