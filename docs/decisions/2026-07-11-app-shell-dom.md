@@ -43,9 +43,14 @@ Séparer l'UI **par nature** :
 
 1. **Toasts + Rotate gate → DOM.** ✅ (2026-07-11)
 2. **Joysticks → DOM** (dynamiques/flottants) + math dans `input/stickMath.ts`. ✅ (2026-07-11)
-3. **Pairing overlay → DOM** (QR via dep `qrcode`, pastille, phases). ⏳
-4. **Boot controller léger** : fork `AppHost.start` par rôle — un controller pur ne spawne
-   ni render worker, ni Babylon, ni sim. ⏳ (le vrai gain perf)
+3. **Pairing overlay → DOM** (QR via dep `qrcode` rendu SVG, pastille, phases). ✅ (2026-07-12)
+   `pairingHost` pousse un callback `onPhase(PairingStatus)` — plus aucune dépendance au
+   render worker. `PairingOverlayScreen`/`PairingPanel`/`QR.ts` Pixi supprimés.
+4. **Boot controller léger** : entry séparée `ControllerHost` choisie par `main.ts` (résolution
+   de rôle avant le chargement du chunk) — un controller pur ne spawne ni render worker, ni
+   Babylon, ni sim, ni SAB. ✅ (2026-07-12) Mesuré en build prod : `/?r=CODE` = 7 requêtes,
+   zéro chunk lourd (~4 Mo évités). Dette : `PlayingOnPhoneScreen` (handoff receiver) reste
+   Pixi — à migrer au recâblage du handoff.
 
 ## Conséquences / à mettre à jour
 
