@@ -1,6 +1,20 @@
 /** Rôle annoncé sur le canal de pairing — miroir de `DeviceRole` sans le cas `unknown`. */
 export type PeerRole = 'controller' | 'receiver';
 
+/**
+ * Phase du cycle de pairing — **source unique de vérité** poussée par `pairingHost` via son
+ * callback `onPhase`. L'UI (shell DOM) ne décide rien, elle rend la phase :
+ * `searching` (QR / recherche) → `pairing` (peer découvert, connexion auto en cours, pastille) →
+ * `paired` (connecté). Les phases `reconnecting`/`error` s'insèreront ici (robustesse, à venir).
+ */
+export type PairingPhase = 'searching' | 'pairing' | 'paired';
+
+/** Snapshot de phase poussé vers l'UI — `peerName` non-nul dès `pairing`. */
+export interface PairingStatus {
+  readonly phase: PairingPhase;
+  readonly peerName: string | null;
+}
+
 // Types alias (pas interfaces) : Trystero contraint ses payloads à `JsonValue`, et seuls les
 // alias reçoivent une signature d'index implicite compatible en TypeScript.
 export type PresencePayload = { role: PeerRole; name: string };

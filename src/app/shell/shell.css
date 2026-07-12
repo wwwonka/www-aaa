@@ -129,6 +129,147 @@
   opacity: 1;
 }
 
+/* --- Pairing overlay : sheet slide-up (receiver) / plein écran en fondu (controller) --- */
+.shell-pairing {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  /* la visibilité ne bascule qu'après la transition de sortie (slide/fade 320ms) */
+  transition: visibility 0s linear 340ms;
+}
+.shell-pairing--active {
+  visibility: visible;
+  transition: visibility 0s;
+}
+.shell-pairing__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  transition: opacity 320ms ease;
+}
+.shell-pairing--active .shell-pairing__backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+.shell-pairing__sheet {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: min(90%, 720px);
+  height: 82%;
+  transform: translate(-50%, 105%);
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(12, 12, 15, 0.97);
+  border: 1.5px solid #2a2a2e;
+  border-bottom: none;
+  border-radius: 28px 28px 0 0;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(14px, 3vh, 28px);
+  overflow: hidden;
+}
+.shell-pairing--active .shell-pairing__sheet {
+  transform: translate(-50%, 0);
+}
+/* Controller : panneau plein écran opaque en fondu (pas de slide, pas de backdrop). */
+.shell-pairing--fullscreen .shell-pairing__backdrop {
+  display: none;
+}
+.shell-pairing--fullscreen .shell-pairing__sheet {
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  transform: translate(-50%, 0);
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+.shell-pairing--fullscreen.shell-pairing--active .shell-pairing__sheet {
+  opacity: 1;
+}
+.shell-pairing__close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1.5px solid #3a3a3e;
+  background: rgba(26, 26, 30, 0.9);
+  color: #ccc;
+  font-size: 20px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.shell-pairing__status {
+  color: #8a8a8a;
+  font-size: clamp(13px, 2.2vmin, 22px);
+  letter-spacing: 3px;
+}
+.shell-pairing__heading {
+  color: #fff;
+  font-size: clamp(20px, 3.4vmin, 34px);
+  line-height: 1.45;
+  letter-spacing: 3px;
+  text-align: center;
+}
+.shell-qr {
+  width: clamp(160px, 34vmin, 280px);
+  aspect-ratio: 1;
+  opacity: 1;
+  transition: opacity 260ms ease;
+}
+.shell-qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.shell-pairing__url {
+  color: #555;
+  font-size: clamp(11px, 1.6vmin, 16px);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.shell-pairing__divider {
+  width: min(420px, 70%);
+  height: 1px;
+  margin: clamp(6px, 1.4vh, 14px) 0;
+  background: #333;
+}
+.shell-pairing__label {
+  color: #8a8a8a;
+  font-size: clamp(12px, 1.8vmin, 18px);
+  letter-spacing: 3px;
+}
+.shell-pairing__chip {
+  border: 1.5px solid #3a3a3a;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 14px 28px;
+  color: #fff;
+  font-size: clamp(15px, 2.4vmin, 24px);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+/* Pastille du peer : absente du flux tant qu'aucun peer n'est découvert. */
+.shell-pairing__peer {
+  display: none;
+}
+.shell-pairing__peer--visible {
+  display: block;
+}
+/* QR + url : s'effacent dès qu'un peer est découvert (la pastille les remplace). */
+.shell-pairing__search-only--hidden {
+  opacity: 0;
+}
+.shell-pairing__url.shell-pairing__search-only--hidden {
+  display: none;
+}
+
 .shell-start {
   position: absolute;
   top: max(28px, 8%);

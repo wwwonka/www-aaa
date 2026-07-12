@@ -4,6 +4,8 @@ import { assetPath } from '../../core/assetPath';
 import { Toast } from './components/Toast';
 import { RotateGate } from './components/RotateGate';
 import { Joysticks } from './components/Joysticks';
+import { PairingOverlay } from './components/PairingOverlay';
+import type { PairingStatus, PeerRole } from '../../input/signaling/types';
 
 export interface ShellHostOptions {
   /** Ce device utilise des joysticks tactiles (solo mobile OU controller) → joysticks + gate. */
@@ -12,6 +14,13 @@ export interface ShellHostOptions {
   readonly onInput: (dirX: number, dirZ: number) => void;
   /** START pressé (controller) → lance la partie (PLAY + sync du peer). */
   readonly onStart: () => void;
+  /** Identité de session pour l'overlay de pairing (QR + pastilles) — voir `PairingOverlay`. */
+  readonly pairing: {
+    readonly role: PeerRole;
+    readonly pageUrl: string;
+    readonly roomCode: string | null;
+    readonly deviceName: string;
+  };
 }
 
 /**
@@ -25,7 +34,9 @@ export class ShellHost {
   private readonly _toast: Toast;
   private readonly _rotate: RotateGate | null;
   private readonly _joysticks: Joysticks | null;
+  private readonly _pairing: PairingOverlay;
   private _portrait = false;
+  private _lastState: string | null = null;
   private _inGame = false;
   private _controllerMode = false;
 
@@ -41,14 +52,25 @@ export class ShellHost {
     this._joysticks = opts.usesTouchInput
       ? new Joysticks(this._root, { onInput: opts.onInput, onStart: opts.onStart })
       : null;
+    this._pairing = new PairingOverlay(this._root, {
+      ...opts.pairing,
+      onClose: () => appOrchestrator.send({ type: 'CLOSE_PAIRING' }),
+    });
 
     // L'orchestrateur tourne sur le main : on réagit à l'AppState en direct (pas de round-trip).
     appOrchestrator.subscribe((snapshot) => {
-      const inGame = snapshot.value === 'IN_GAME';
-      if (inGame === this._inGame) return; // dedupe (ASSET_* ré-émet des snapshots)
-      this._inGame = inGame;
+      const state = snapshot.value as string;
+      if (state === this._lastState) return; // dedupe (ASSET_* ré-émet des snapshots)
+      this._lastState = state;
+      this._inGame = state === 'IN_GAME';
+      this._pairing.setActive(state === 'PAIRING_MODE');
       this._sync();
     });
+  }
+
+  /** Phase du cycle de pairing réseau — source unique poussée par `pairingHost`. */
+  setPairingStatus(status: PairingStatus): void {
+    this._pairing.setStatus(status);
   }
 
   /** Notification transitoire en haut de l'écran (file d'attente, un à la fois). */

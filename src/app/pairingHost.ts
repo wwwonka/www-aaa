@@ -1,8 +1,12 @@
-import type { RenderWorkerApi } from '../render/render.worker';
 import { appOrchestrator } from '../core/AppOrchestrator';
 import { createTrysteroPairingChannel } from '../input/signaling/PairingChannel';
 import { getIceServers } from '../input/signaling/iceServers';
-import type { DiscoveredPeer, PairingChannel, PeerRole } from '../input/signaling/types';
+import type {
+  DiscoveredPeer,
+  PairingChannel,
+  PairingStatus,
+  PeerRole,
+} from '../input/signaling/types';
 import { decodeInput, encodeInput } from '../input/inputCodec';
 import type { DecodedInput } from '../input/inputCodec';
 import { INPUT_PAYLOAD_BYTES } from '../shared/constants';
@@ -12,7 +16,11 @@ export interface PairingHostOptions {
   /** Code de session — généré côté receiver, lu depuis `?r=` côté controller (`null` = pas de room, on reste en searching). */
   readonly roomCode: string | null;
   readonly deviceName: string;
-  readonly renderApi: RenderWorkerApi;
+  /**
+   * Phase du cycle de pairing — **source unique de vérité**, poussée vers l'UI (shell DOM, et
+   * prompt du title Pixi via le câblage AppHost). Le pairing ne dépend plus du render worker.
+   */
+  readonly onPhase: (status: PairingStatus) => void;
   /** Notification transitoire — vers le shell DOM (`ShellHost.showToast`), plus le worker Pixi. */
   readonly showToast: (message: string) => void;
   /**
@@ -53,13 +61,13 @@ export interface PairingHost {
 }
 
 /**
- * Câble le canal de pairing (main thread, contrainte WebRTC) à l'orchestrateur et au render
- * worker. Controller : join dès le boot (il démarre sur le pairing plein écran). Receiver :
+ * Câble le canal de pairing (main thread, contrainte WebRTC) à l'orchestrateur et au shell
+ * DOM. Controller : join dès le boot (il démarre sur le pairing plein écran). Receiver :
  * join lazy à l'ouverture de `PAIRING_MODE`, leave si la sheet se ferme sans pairing.
  * Scénario 1 uniquement — un départ de peer redevient searching, aucune reconnexion.
  */
 export function setupPairingHost(options: PairingHostOptions): PairingHost {
-  const { role, roomCode, deviceName, renderApi, applyAxes, isLocalAuthority } = options;
+  const { role, roomCode, deviceName, onPhase, applyAxes, isLocalAuthority } = options;
 
   // Rôle EFFECTIF du canal : `role` au boot, mais un mobile solo (receiver) peut basculer en
   // controller au runtime via `joinAsController` (« USE DEVICE AS CONTROLLER »).
@@ -80,7 +88,7 @@ export function setupPairingHost(options: PairingHostOptions): PairingHost {
   const pushPhase = (): void => {
     if (pairedPeerId !== null) return;
     const peer = [...discovered.values()][0];
-    void renderApi.setPairingPhase(peer ? 'pairing' : 'searching', peer?.name ?? null);
+    onPhase({ phase: peer ? 'pairing' : 'searching', peerName: peer?.name ?? null });
   };
 
   let joining = false;
@@ -121,14 +129,14 @@ export function setupPairingHost(options: PairingHostOptions): PairingHost {
           applyAxes?.(0, 0);
           options.onPairedPeerLost?.();
           appOrchestrator.send({ type: 'CONTROLLER_DISCONNECTED' });
-          void renderApi.setPairingPhase('searching', null);
+          onPhase({ phase: 'searching', peerName: null });
         },
         onPaired(peer): void {
           if (pairedPeerId !== null) return; // déjà pairé — évite un double toast (auto + clic concurrents)
           pairedPeerId = peer.id;
           discovered.clear();
           appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' });
-          void renderApi.setPairingPhase('paired', peer.name);
+          onPhase({ phase: 'paired', peerName: peer.name });
           options.showToast(
             effectiveRole === 'receiver'
               ? `CONNECTED TO CONTROLLER ${peer.name}`

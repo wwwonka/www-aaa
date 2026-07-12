@@ -123,9 +123,16 @@ export async function startMonolithMode(): Promise<void> {
     }
   });
 
+  let lastSentScreen = '';
   appOrchestrator.subscribe((snapshot) => {
     currentState = String(snapshot.value);
-    renderApi.showScreen(snapshot.value as any);
+    // PAIRING_MODE est un overlay shell DOM sans écran Pixi (comme en mode workers, voir
+    // AppHost) — le relayer ferait fondre le title vers un état non enregistré, et renvoyer
+    // l'écran déjà affiché au retour (CLOSE_PAIRING) rejouerait son reveal.
+    if (currentState !== 'PAIRING_MODE' && currentState !== lastSentScreen) {
+      lastSentScreen = currentState;
+      renderApi.showScreen(snapshot.value as any);
+    }
     if (currentState === 'IN_GAME' && !sim) {
       void simPromise.then((created) => {
         sim = created;

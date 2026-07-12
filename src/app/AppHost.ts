@@ -122,15 +122,13 @@ export class AppHost {
     if (import.meta.env.DEV && shellRole === 'receiver')
       console.log(`[AppHost] room ${roomCode} — controller: ?r=${roomCode}`);
 
-    // Avant setSendToAsm (qui construit les screens) : le worker ne peut ni détecter le rôle ni
-    // lire l'URL de la page — son `location` pointe sur le script du worker.
-    await renderApi.setShellContext({
-      role: shellRole,
-      pageUrl: `${window.location.origin}${window.location.pathname}`,
-      roomCode,
-      deviceName,
-      selfControlled,
-    });
+    // URL de la page (origin+pathname) — affichée par l'overlay de pairing shell et encodée
+    // dans son QR (`?r=CODE`).
+    const pageUrl = `${window.location.origin}${window.location.pathname}`;
+
+    // Avant setSendToAsm (qui construit les screens) : le worker ne peut pas détecter le rôle
+    // (UA/localStorage vivent côté main). L'identité de pairing (URL, code, nom) va au shell DOM.
+    await renderApi.setShellContext({ role: shellRole, selfControlled });
 
     // SAB de contrôle (CLAUDE.md §7) : le main écrit (joysticks — RTC du peer pairé ou locaux
     // quand ce device est l'autorité —, clavier dev), la sim draine à chaque step. Les DEUX
@@ -160,6 +158,7 @@ export class AppHost {
         pairing.notifyLocalPlay();
         appOrchestrator.send({ type: 'PLAY' });
       },
+      pairing: { role: shellRole, pageUrl, roomCode, deviceName },
     });
 
     const pairing: PairingHost = setupPairingHost({
@@ -167,7 +166,13 @@ export class AppHost {
       role: shellRole,
       roomCode,
       deviceName,
-      renderApi,
+      onPhase: (status): void => {
+        shellHost.setPairingStatus(status);
+        // Miroir vers le prompt du Title Pixi (« CONNECT A CONTROLLER » ⇄ « START GAME ») —
+        // même comportement que l'ancien setPairingPhase côté worker.
+        if (status.phase === 'paired') void renderApi.setControllerPaired(status.peerName);
+        else if (status.phase === 'searching') void renderApi.setControllerPaired(null);
+      },
       // Axes → SAB local (policy latest-wins, pipeline §7 de bout en bout).
       applyAxes: (x, z): void => writeAxes(controlView, x, z),
       // Solo mobile : ce device EST l'autorité en permanence → les joysticks tactiles écrivent le
@@ -241,8 +246,8 @@ export class AppHost {
     // warmUp() parallélisé (un par asset) — sans déduplication, showScreen() (et donc
     // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
     // vrai changement d'écran.
-    // Le miroir searching ⇄ paired vers l'UI (setControllerPaired, avec le vrai nom du peer)
-    // appartient désormais à pairingHost — ici on ne relaye que les changements d'écran.
+    // Le miroir searching ⇄ paired vers le prompt du title (setControllerPaired) vit dans le
+    // câblage `onPhase` ci-dessus — ici on ne relaye que les changements d'écran.
     // Simulation (boids + Havok) — les DEUX rôles la spawnent et l'initialisent au boot
     // (préchauffe wasm ; le controller en a besoin dès le premier handoff, §B.5), mais seul
     // le device AUTORITÉ la démarre : à aucun instant deux sims ne steppent (CLAUDE.md §4).
@@ -302,11 +307,18 @@ export class AppHost {
     const boundHandoff = handoff;
 
     let lastScreenState: string | undefined;
+    let lastSentScreen: string | undefined;
     appOrchestrator.subscribe((snapshot) => {
       if (snapshot.value === lastScreenState) return;
       const wasInGame = lastScreenState === 'IN_GAME';
       lastScreenState = snapshot.value as string;
-      void renderApi.showScreen(snapshot.value as AppState);
+      // PAIRING_MODE est un overlay shell DOM (main thread) : le worker ne le connaît plus, le
+      // title reste affiché dessous. Et au retour (CLOSE_PAIRING) on ne renvoie pas l'écran déjà
+      // affiché — ScreenManager rejouerait onLeave/onEnter, donc le reveal du title.
+      if (snapshot.value !== 'PAIRING_MODE' && snapshot.value !== lastSentScreen) {
+        lastSentScreen = snapshot.value as string;
+        void renderApi.showScreen(snapshot.value as AppState);
+      }
       if (snapshot.value === 'IN_GAME') {
         // Garde d'autorité (§B.1) : le controller entre aussi en IN_GAME au START croisé,
         // mais seul le device ACTIVE steppe — sa sim locale reste initialisée et figée. Un mobile

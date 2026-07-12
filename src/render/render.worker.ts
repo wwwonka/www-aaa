@@ -5,7 +5,6 @@ import * as Comlink from 'comlink';
 import { RenderManager } from './RenderManager';
 import type { ShellContext } from './RenderManager';
 import type { AppState, AppEvent } from '../core/AppOrchestrator';
-import type { PairingPhase } from '../ui/panels/PairingPanel';
 import { devLoadersReady } from './assets/registerDefaultLoaders';
 import { createSimHost } from '../sim/simHost';
 import type { SimHost } from '../sim/simHost';
@@ -32,14 +31,9 @@ const api = {
     manager.setShellContext(ctx);
   },
 
-  /** Bascule searching ⇄ paired de l'overlay de pairing + prompt du title (`null` = retour à searching). */
+  /** Prompt du title ("CONNECT CONTROLLER" ⇄ "START GAME") — `null` = non pairé. */
   setControllerPaired(peerName: string | null): void {
     manager.setControllerPaired(peerName);
-  },
-
-  /** Phase du cycle de pairing (searching/pairing/paired) — source unique côté `pairingHost`. */
-  setPairingPhase(phase: PairingPhase, peerName: string | null): void {
-    manager.setPairingPhase(phase, peerName);
   },
 
   async setSendToAsm(fn: (event: AppEvent) => void): Promise<void> {
