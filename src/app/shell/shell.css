@@ -160,7 +160,9 @@
   height: 82%;
   transform: translate(-50%, 105%);
   transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
-  background: rgba(12, 12, 15, 0.97);
+  /* Opaque — à 0,97 le title screen du canvas transparaissait à travers le panneau
+     (ghost "TITLE SCREEN" au-dessus/autour du QR, cf. session 2026-07-12). */
+  background: #0c0c0f;
   border: 1.5px solid #2a2a2e;
   border-bottom: none;
   border-radius: 28px 28px 0 0;
@@ -262,10 +264,13 @@
 .shell-pairing__peer--visible {
   display: block;
 }
-/* QR + url : s'effacent dès qu'un peer est découvert (la pastille les remplace). */
+/* QR + url : s'effacent dès qu'un peer est découvert (la pastille les remplace).
+   Les deux sortent du flux — sinon le QR masqué laissait un trou de ~245px au milieu
+   du panneau, comme s'il était passé sous le fond. */
 .shell-pairing__search-only--hidden {
   opacity: 0;
 }
+.shell-qr.shell-pairing__search-only--hidden,
 .shell-pairing__url.shell-pairing__search-only--hidden {
   display: none;
 }
