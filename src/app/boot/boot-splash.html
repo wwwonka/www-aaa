@@ -1,0 +1,30 @@
+<!-- First paint statique (phase BOOT, CSS only — CLAUDE.md §10) : présent dans le HTML brut
+     avant tout chunk JS. Controller (`?r=`/`?controller`) : « CONNECTING… » immédiat pendant
+     que le chunk shell charge. Receiver : voile noir jusqu'au premier écran monté dans le
+     canvas. Retiré par chaque host via `removeBootSplash()` (src/app/boot/bootSplash.ts). -->
+<style>
+  #boot-splash {
+    position: fixed;
+    inset: 0;
+    /* Au-dessus du canvas, sous le shell DOM (#shell-root, z-index 10) : l'overlay de
+       pairing du controller peut apparaître par-dessus avant le retrait du splash. */
+    z-index: 9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    color: #8a8a8a;
+    /* fezbox n'est pas encore chargée à ce stade — system-ui assume le premier paint. */
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 3px;
+  }
+</style>
+<div id="boot-splash"></div>
+<script>
+  // Rôle lisible sans JS applicatif : `?r=CODE` (QR scanné) ou `?controller` → feedback
+  // immédiat ; toute autre URL garde le voile noir (le title arrive dans le canvas).
+  if (/[?&](r=|controller)/.test(location.search))
+    document.getElementById('boot-splash').textContent = 'CONNECTING…';
+</script>

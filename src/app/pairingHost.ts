@@ -1,5 +1,4 @@
 import { appOrchestrator } from '../core/AppOrchestrator';
-import { createTrysteroPairingChannel } from '../input/signaling/PairingChannel';
 import { getIceServers } from '../input/signaling/iceServers';
 import type {
   DiscoveredPeer,
@@ -98,7 +97,12 @@ export function setupPairingHost(options: PairingHostOptions): PairingHost {
     joining = true;
     // Résout STUN/TURN (creds éphémères Cloudflare, fallback STUN public) AVANT de joindre la room,
     // pour que la négociation ICE dispose des relais dès le départ (voir `iceServers.ts`).
-    const iceServers = await getIceServers();
+    // PairingChannel (trystero+nostr) en import() dynamique (D5) : le receiver ne le charge
+    // qu'à OPEN_PAIRING ; le controller joint au boot, l'import part en parallèle du fetch ICE.
+    const [{ createTrysteroPairingChannel }, iceServers] = await Promise.all([
+      import('../input/signaling/PairingChannel'),
+      getIceServers(),
+    ]);
     joining = false;
     if (channel !== null) return; // re-check après l'await (leave concurrent)
     channel = createTrysteroPairingChannel({

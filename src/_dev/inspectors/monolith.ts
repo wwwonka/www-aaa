@@ -10,6 +10,7 @@ import { createGameSim } from '../../sim/GameSim';
 import type { GameSim } from '../../sim/GameSim';
 import { createControlSAB } from '../../core/sab-manager';
 import { writeAxes } from '../../input/controlChannel';
+import { removeBootSplash } from '../../app/boot/bootSplash';
 import { attachKeyboardSimControls, attachSnapshotDevKeys } from './simControls';
 
 // TODO: Les méthodes debug (scene, resize, setVisibility, attachDebugOverlay, etc.)
@@ -132,6 +133,8 @@ export async function startMonolithMode(): Promise<void> {
     if (currentState !== 'PAIRING_MODE' && currentState !== lastSentScreen) {
       lastSentScreen = currentState;
       renderApi.showScreen(snapshot.value as any);
+      // Comme AppHost : le splash statique (boot-splash.html) tombe au premier écran monté.
+      removeBootSplash();
     }
     if (currentState === 'IN_GAME' && !sim) {
       void simPromise.then((created) => {

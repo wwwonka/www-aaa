@@ -23,6 +23,8 @@ import { generateDeviceName, generateRoomCode } from '../input/signaling/identit
 import { createControlSAB } from '../core/sab-manager';
 import { writeAxes } from '../input/controlChannel';
 import { benchmarkCompute, resolveTier } from './platform/workerStrategy';
+import { runWhenIdle } from './platform/idle';
+import { removeBootSplash } from './boot/bootSplash';
 
 /**
  * Boots the app shell: detects the runtime context, installs browser guards, spins up the
@@ -246,12 +248,12 @@ export class AppHost {
     // vrai changement d'écran.
     // Le miroir searching ⇄ paired vers le prompt du title (setControllerPaired) vit dans le
     // câblage `onPhase` ci-dessus — ici on ne relaye que les changements d'écran.
-    // Simulation (boids + Havok) — les DEUX rôles la spawnent et l'initialisent au boot
-    // (préchauffe wasm ; le controller en a besoin dès le premier handoff, §B.5), mais seul
-    // le device AUTORITÉ la démarre : à aucun instant deux sims ne steppent (CLAUDE.md §4).
+    // Simulation (boids + Havok) — les DEUX rôles la spawnent et l'initialisent (préchauffe
+    // wasm ; le controller en a besoin dès le premier handoff, §B.5), mais seul le device
+    // AUTORITÉ la démarre : à aucun instant deux sims ne steppent (CLAUDE.md §4).
     // Topologie selon le tier : worker dédié (`high`) ou hébergée dans le worker Render+Sim
     // (`low`) — même simHost derrière (src/sim/simHost.ts).
-    let simControl: {
+    type SimControl = {
       readonly ready: Promise<void>;
       start(): void;
       stop(): void;
@@ -260,32 +262,48 @@ export class AppHost {
       /** Restaure un snapshot — le buffer part en transfert (inutilisable ensuite côté main). */
       restore(buf: ArrayBuffer): Promise<void>;
     };
-    if (tier === 'high') {
-      const simApi = Comlink.wrap<SimulationWorkerApi>(
-        new Worker(new URL('../sim/simulation.worker.ts', import.meta.url), {
-          type: 'module',
-          name: 'SimulationWorker',
-        }),
-      );
-      simControl = {
-        // Buffers SAB relayés au render worker (mémoire partagée, zéro copie).
-        ready: simApi.init(controlSab).then(async (buffers) => {
-          await renderApi.attachGameBuffers(buffers);
-        }),
-        start: () => void simApi.start(),
-        stop: () => void simApi.stop(),
-        capture: () => simApi.capture(),
-        restore: (buf) => simApi.restore(Comlink.transfer(buf, [buf])),
-      };
-    } else {
-      simControl = {
+    const createSimControl = (): SimControl => {
+      if (tier === 'high') {
+        const simApi = Comlink.wrap<SimulationWorkerApi>(
+          new Worker(new URL('../sim/simulation.worker.ts', import.meta.url), {
+            type: 'module',
+            name: 'SimulationWorker',
+          }),
+        );
+        return {
+          // Buffers SAB relayés au render worker (mémoire partagée, zéro copie).
+          ready: simApi.init(controlSab).then(async (buffers) => {
+            await renderApi.attachGameBuffers(buffers);
+          }),
+          start: () => void simApi.start(),
+          stop: () => void simApi.stop(),
+          capture: () => simApi.capture(),
+          restore: (buf) => simApi.restore(Comlink.transfer(buf, [buf])),
+        };
+      }
+      return {
         ready: renderApi.simInit(controlSab).then(() => undefined),
         start: () => void renderApi.simStart(),
         stop: () => void renderApi.simStop(),
         capture: () => renderApi.simCapture(),
         restore: (buf) => renderApi.simRestore(Comlink.transfer(buf, [buf])),
       };
-    }
+    };
+    // Sim différée title-first (PR 3) : façade paresseuse — même interface, mais le spawn
+    // worker + compile wasm ne partent qu'en idle après `startUp()` (le title peint d'abord).
+    // Les appels arrivés avant l'init s'enfilent sur la promesse dans l'ordre d'émission ;
+    // PLAY attend déjà `ready`, comportement identique.
+    let resolveSimReal!: (real: SimControl) => void;
+    const simReal = new Promise<SimControl>((resolve) => {
+      resolveSimReal = resolve;
+    });
+    const simControl: SimControl = {
+      ready: simReal.then((real) => real.ready),
+      start: () => void simReal.then((real) => real.start()),
+      stop: () => void simReal.then((real) => real.stop()),
+      capture: () => simReal.then((real) => real.capture()),
+      restore: (buf) => simReal.then((real) => real.restore(buf)),
+    };
     // Erreur froide (wasm indisponible…) : loggée, le title reste fonctionnel — PLAY mènera
     // à une arène vide plutôt qu'à un boot cassé.
     simControl.ready.catch((err: unknown) => console.error('[AppHost] sim init failed:', err));
@@ -315,7 +333,9 @@ export class AppHost {
       // affiché — ScreenManager rejouerait onLeave/onEnter, donc le reveal du title.
       if (snapshot.value !== 'PAIRING_MODE' && snapshot.value !== lastSentScreen) {
         lastSentScreen = snapshot.value as string;
-        void renderApi.showScreen(snapshot.value as AppState);
+        // Le splash statique (boot-splash.html) tombe au premier écran réellement monté
+        // dans le canvas — `showScreen` résout une fois le screen construit côté worker.
+        void renderApi.showScreen(snapshot.value as AppState).then(removeBootSplash);
       }
       if (snapshot.value === 'IN_GAME') {
         // Garde d'autorité (§B.1) : le controller entre aussi en IN_GAME au START croisé,
@@ -333,6 +353,10 @@ export class AppHost {
       }
     });
     appOrchestrator.startUp();
+
+    // Init réelle de la sim en idle (title-first) : le premier snapshot vient de partir vers
+    // le render worker — le spawn sim/wasm ne lui dispute plus le boot.
+    runWhenIdle(() => resolveSimReal(createSimControl()));
 
     // `?dev` (build DEV seulement — en prod ce bloc est tree-shaké et la garde `hasController`
     // reste le seul chemin vers IN_GAME) : controller simulé pour débloquer PLAY + pilotage

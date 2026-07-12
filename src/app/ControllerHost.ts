@@ -8,6 +8,13 @@ import { setupPairingHost } from './pairingHost';
 import type { PairingHost } from './pairingHost';
 import { ShellHost } from './shell/ShellHost';
 import { generateDeviceName } from '../input/signaling/identity';
+import { runWhenIdle } from './platform/idle';
+import { removeBootSplash } from './boot/bootSplash';
+// URLs des chunks lourds SANS leur code (suffixes Vite `?worker&url` / `?url` — de simples
+// strings dans ce chunk) : le prefetch post-pairing ne doit rien instancier (D3).
+import renderWorkerUrl from '../render/render.worker.ts?worker&url';
+import simulationWorkerUrl from '../sim/simulation.worker.ts?worker&url';
+import havokWasmUrl from '@babylonjs/havok/lib/esm/HavokPhysics.wasm?url';
 
 /**
  * Boot d'un device controller pur (`?r=CODE` scanné, `?controller`, ou rôle persisté) — le
@@ -50,11 +57,28 @@ export class ControllerHost {
     });
     shellHost.setControllerMode(true);
 
+    // Après pairing : chauffe le cache HTTP/SW des chunks lourds (render, sim, Havok wasm)
+    // en idle, fetch-only — pas de worker, pas de compile wasm (D3). Le futur handoff-in
+    // (« amener le jeu au téléphone ») trouvera les octets déjà locaux. Opportuniste : un
+    // échec réseau est avalé, le handoff re-fetchera au besoin.
+    let prefetched = false;
+    const prefetchHeavyChunks = (): void => {
+      if (prefetched) return;
+      prefetched = true;
+      runWhenIdle(() => {
+        for (const url of [renderWorkerUrl, simulationWorkerUrl, havokWasmUrl])
+          void fetch(url).catch(() => undefined);
+      });
+    };
+
     const pairing: PairingHost = setupPairingHost({
       role: 'controller',
       roomCode,
       deviceName,
-      onPhase: (status) => shellHost.setPairingStatus(status),
+      onPhase: (status) => {
+        shellHost.setPairingStatus(status);
+        if (status.phase === 'paired') prefetchHeavyChunks();
+      },
       showToast: (message) => shellHost.showToast(message),
       // Pas d'`applyAxes`/`isLocalAuthority` : aucune sim locale — l'input va toujours en RTC.
     });
@@ -62,6 +86,8 @@ export class ControllerHost {
     appOrchestrator.startUp();
     // Boot directement sur le pairing plein écran (join immédiat, voir pairingHost).
     appOrchestrator.send({ type: 'OPEN_PAIRING' });
+    // L'overlay shell est monté et actif (synchrone) — le splash statique a fini son travail.
+    removeBootSplash();
 
     // Gate d'orientation : le jeu se joue en landscape (iOS Safari ne verrouille pas en onglet).
     // En portrait, on envoie des axes nuls (§A.6) — le flock du receiver ne doit pas filer sur
