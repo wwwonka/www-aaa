@@ -19,7 +19,7 @@ import { ShellHost } from './shell/ShellHost';
 import { startQrScanner, type QrScannerHandle } from '../input/signaling/qrScanner';
 import { createHandoffCoordinator } from './HandoffCoordinator';
 import type { HandoffCoordinator } from './HandoffCoordinator';
-import { generateDeviceName, generateRoomCode } from '../input/signaling/identity';
+import { generateDeviceName, persistentRoomCode } from '../input/signaling/identity';
 import { createControlSAB } from '../core/sab-manager';
 import { writeAxes } from '../input/controlChannel';
 import { benchmarkCompute, resolveTier } from './platform/workerStrategy';
@@ -113,11 +113,11 @@ export class AppHost {
 
     await renderApi.init(Comlink.transfer(offscreen, [offscreen]));
 
-    // Identité de session (jamais persistée) : le receiver génère son code de room dès le boot
-    // (le QR est construit une seule fois avec l'overlay shell) mais ne joint la room qu'à
-    // OPEN_PAIRING (voir pairingHost).
+    // Identité de session : le receiver résout son code de room dès le boot (le QR est construit une
+    // seule fois avec l'overlay shell) mais ne joint la room qu'à OPEN_PAIRING (voir pairingHost).
+    // Code PERSISTANT par onglet (sessionStorage) : un reload receiver garde le même QR valide.
     const shellRole = 'receiver' as const;
-    const roomCode = generateRoomCode();
+    const roomCode = persistentRoomCode();
     const deviceName = generateDeviceName();
     // DX : tester le flow deux-onglets exige le code sans scanner le QR (phone only).
     if (import.meta.env.DEV) console.log(`[AppHost] room ${roomCode} — controller: ?r=${roomCode}`);
@@ -158,7 +158,8 @@ export class AppHost {
         pairing.notifyLocalPlay();
         appOrchestrator.send({ type: 'PLAY' });
       },
-      pairing: { role: shellRole, pageUrl, roomCode, deviceName },
+      // SCAN AGAIN est réservé au controller pur (overlay receiver → RETRY seul, sur sa propre room).
+      pairing: { role: shellRole, pageUrl, roomCode, deviceName, onRetry: () => pairing.retry() },
     });
 
     const pairing: PairingHost = setupPairingHost({

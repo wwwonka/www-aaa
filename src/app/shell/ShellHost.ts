@@ -14,12 +14,16 @@ export interface ShellHostOptions {
   readonly onInput: (dirX: number, dirZ: number) => void;
   /** START pressé (controller) → lance la partie (PLAY + sync du peer). */
   readonly onStart: () => void;
-  /** Identité de session pour l'overlay de pairing (QR + pastilles) — voir `PairingOverlay`. */
+  /** Identité de session + reprises pour l'overlay de pairing (QR + pastilles) — voir `PairingOverlay`. */
   readonly pairing: {
     readonly role: PeerRole;
     readonly pageUrl: string;
     readonly roomCode: string | null;
     readonly deviceName: string;
+    /** Bouton RETRY (phase `error`) — relance une passe de connexion. */
+    readonly onRetry: () => void;
+    /** Bouton SCAN AGAIN (controller) — ré-ouvre le scanner pour un nouveau code de room. */
+    readonly onScanAgain?: () => void;
   };
 }
 

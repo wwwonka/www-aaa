@@ -42,6 +42,31 @@ export class ControllerHost {
     const deviceName = generateDeviceName();
     const pageUrl = `${window.location.origin}${window.location.pathname}`;
 
+    // SCAN AGAIN : ré-ouvre le scanner caméra pour capter un NOUVEAU code (room morte → RETRY seul
+    // ne peut pas aboutir). `qrScanner` en import dynamique — la lib caméra reste hors du boot léger.
+    let scanning = false;
+    const scanAgain = (): void => {
+      if (scanning) return;
+      scanning = true;
+      void import('../input/signaling/qrScanner').then(({ startQrScanner }) => {
+        startQrScanner({
+          onCode: (code) => {
+            scanning = false;
+            shellHost.showToast('CONNECTING…');
+            pairing.joinAsController(code); // même room-switch propre que « USE AS CONTROLLER »
+          },
+          onError: (err) => {
+            scanning = false;
+            console.warn('[ControllerHost] scanner caméra indisponible:', err);
+            shellHost.showToast('CAMERA UNAVAILABLE');
+          },
+          onClose: () => {
+            scanning = false;
+          },
+        });
+      });
+    };
+
     // Même holder qu'AppHost pour la dépendance circulaire shell ⇄ pairing : les callbacks du
     // shell lisent `pairing` bien après son affectation.
     const shellHost = new ShellHost({
@@ -53,7 +78,14 @@ export class ControllerHost {
         pairing.notifyLocalPlay();
         appOrchestrator.send({ type: 'PLAY' });
       },
-      pairing: { role: 'controller', pageUrl, roomCode, deviceName },
+      pairing: {
+        role: 'controller',
+        pageUrl,
+        roomCode,
+        deviceName,
+        onRetry: () => pairing.retry(),
+        onScanAgain: scanAgain,
+      },
     });
     shellHost.setControllerMode(true);
 

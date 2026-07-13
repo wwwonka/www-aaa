@@ -275,6 +275,32 @@
   display: none;
 }
 
+/* Boutons de reprise (RETRY / SCAN AGAIN) : hors flux sauf en phase `error`. */
+.shell-pairing__actions {
+  display: none;
+  gap: 14px;
+  margin-top: clamp(8px, 2vh, 20px);
+}
+.shell-pairing__actions--visible {
+  display: flex;
+}
+.shell-pairing__btn {
+  border: 1.5px solid #4a4a50;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  padding: 14px 28px;
+  color: #fff;
+  font-family: inherit;
+  font-size: clamp(14px, 2.2vmin, 22px);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.shell-pairing__btn:active {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .shell-start {
   position: absolute;
   top: max(28px, 8%);

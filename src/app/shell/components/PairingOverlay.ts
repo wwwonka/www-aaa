@@ -1,4 +1,4 @@
-import type { PairingStatus, PeerRole } from '../../../input/signaling/types';
+import type { PairingErrorReason, PairingStatus, PeerRole } from '../../../input/signaling/types';
 import { createQrCard } from './QrCard';
 
 export interface PairingOverlayOptions {
@@ -12,6 +12,14 @@ export interface PairingOverlayOptions {
   readonly deviceName: string;
   /** Invoqué par le backdrop (receiver) ou le ✕ (controller) — remonte `CLOSE_PAIRING`. */
   readonly onClose: () => void;
+  /** Bouton RETRY (phase `error`) — relance une passe de connexion sur la même room. */
+  readonly onRetry: () => void;
+  /**
+   * Bouton SCAN AGAIN (phase `error`, controller uniquement) — ré-ouvre le scanner caméra pour
+   * capter un NOUVEAU code : RETRY seul ne peut jamais aboutir sur une room morte (receiver
+   * fermé → code périmé). Absent côté receiver (il ré-essaie sa propre room).
+   */
+  readonly onScanAgain?: () => void;
 }
 
 /**
@@ -28,6 +36,8 @@ export class PairingOverlay {
   private readonly _status: HTMLElement;
   private readonly _heading: HTMLElement;
   private readonly _peer: HTMLElement;
+  /** Boutons de reprise (RETRY / SCAN AGAIN) — visibles seulement en `error`. */
+  private readonly _actions: HTMLElement;
   /** Visibles seulement en `searching` (QR + url). */
   private readonly _searchOnly: readonly HTMLElement[];
 
@@ -73,6 +83,14 @@ export class PairingOverlay {
     this._peer = elem('div', 'shell-pairing__chip shell-pairing__peer');
     sheet.appendChild(this._peer);
 
+    // Reprise sur erreur : RETRY (même room) + SCAN AGAIN (controller — nouveau code). Hors flux
+    // tant qu'on n'est pas en `error`.
+    this._actions = elem('div', 'shell-pairing__actions');
+    this._actions.appendChild(button('RETRY', opts.onRetry));
+    if (!isReceiver && opts.onScanAgain !== undefined)
+      this._actions.appendChild(button('SCAN AGAIN', opts.onScanAgain));
+    sheet.appendChild(this._actions);
+
     const url = elem('div', 'shell-pairing__url', opts.pageUrl.replace(/^https?:\/\//, ''));
     searchOnly.push(url);
     sheet.append(
@@ -93,21 +111,44 @@ export class PairingOverlay {
   }
 
   /** Applique la phase du pairing (source unique côté `pairingHost`). */
-  setStatus({ phase, peerName }: PairingStatus): void {
-    const searching = phase === 'searching' || peerName === null;
-    if (searching) {
-      this._status.textContent = this._searchingStatus();
-      this._heading.style.display = '';
-      this._peer.classList.remove('shell-pairing__peer--visible');
-    } else {
-      // pairing | paired : la pastille du peer remplace le QR (qui s'efface).
-      this._status.textContent = phase === 'paired' ? 'PAIRED WITH' : 'CONNECTING TO';
-      this._heading.style.display = 'none';
-      this._peer.textContent = peerName;
-      this._peer.classList.add('shell-pairing__peer--visible');
-    }
+  setStatus({ phase, peerName, errorReason }: PairingStatus): void {
+    // `searching` sans peer = seul cas qui montre QR + heading ; tout le reste les masque.
+    const searching = phase === 'searching' && peerName === null;
+    const isError = phase === 'error';
+
+    this._status.textContent = this._statusLabel(phase, errorReason);
+    this._heading.style.display = searching ? '' : 'none';
+
+    // Pastille du peer : visible dès qu'on a un nom (pairing / paired / reconnecting), jamais en error.
+    const showPeer = peerName !== null && !isError;
+    if (showPeer) this._peer.textContent = peerName;
+    this._peer.classList.toggle('shell-pairing__peer--visible', showPeer);
+
+    this._actions.classList.toggle('shell-pairing__actions--visible', isError);
+
     for (const el of this._searchOnly)
       el.classList.toggle('shell-pairing__search-only--hidden', !searching);
+  }
+
+  private _statusLabel(phase: PairingStatus['phase'], reason: PairingErrorReason | undefined): string {
+    switch (phase) {
+      case 'paired':
+        return 'PAIRED WITH';
+      case 'pairing':
+        return 'CONNECTING TO';
+      case 'reconnecting':
+        return 'RECONNECTING TO';
+      case 'error':
+        return this._errorLabel(reason);
+      default:
+        return this._searchingStatus();
+    }
+  }
+
+  private _errorLabel(reason: PairingErrorReason | undefined): string {
+    if (reason === 'version') return 'VERSION MISMATCH — RELOAD';
+    if (reason === 'busy') return 'GAME ALREADY HAS A CONTROLLER';
+    return this._role === 'receiver' ? 'NO CONTROLLER FOUND' : "COULDN'T REACH THE GAME";
   }
 
   private _searchingStatus(): string {
@@ -126,6 +167,14 @@ function elem(tag: string, className: string, text?: string): HTMLElement {
   el.className = className;
   if (text !== undefined) el.textContent = text;
   return el;
+}
+
+function button(label: string, onClick: () => void): HTMLButtonElement {
+  const btn = document.createElement('button');
+  btn.className = 'shell-pairing__btn';
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
 }
 
 /** Intercale des `<br>` entre les lignes (flatMap joiner). */
