@@ -2,6 +2,7 @@
 // derrière les firewalls qui bloquent les ports MQTT non-standard (8084/8884) — condition
 // nécessaire au pairing cross-réseau (§Part B.0). L'API `joinRoom` est identique entre stratégies.
 import { joinRoom } from '@trystero-p2p/nostr';
+import { PROTOCOL_VERSION } from './types';
 import type {
   DiscoveredPeer,
   PairedPayload,
@@ -41,6 +42,8 @@ export function createTrysteroPairingChannel(options: PairingChannelOptions): Pa
   const presence = room.makeAction<PresencePayload>('presence');
   const connect = room.makeAction<null>('connect');
   const paired = room.makeAction<PairedPayload>('paired');
+  // `busy` : refus ciblé d'un `connect` quand on est déjà pairé (controller surnuméraire).
+  const busy = room.makeAction<null>('busy');
   const start = room.makeAction<null>('start');
   const input = room.makeAction<Uint8Array>('input');
   // Handoff §B.2 : hoReq (demande d'autorité), hoState (snapshot §B.3), hoAck (autorité cédée).
@@ -51,7 +54,7 @@ export function createTrysteroPairingChannel(options: PairingChannelOptions): Pa
   // Presence ciblée à chaque arrivée plutôt qu'un broadcast périodique : `onPeerJoin` se
   // déclenche des deux côtés pour chaque nouvelle paire, ça suffit à l'échange mutuel.
   room.onPeerJoin = (peerId): void => {
-    void presence.send({ role, name: deviceName }, { target: peerId });
+    void presence.send({ role, name: deviceName, v: PROTOCOL_VERSION }, { target: peerId });
   };
 
   room.onPeerLeave = (peerId): void => {
@@ -59,6 +62,12 @@ export function createTrysteroPairingChannel(options: PairingChannelOptions): Pa
   };
 
   presence.onMessage = (data, { peerId }): void => {
+    // Version d'abord : un build distant incompatible (`busy`/`ping` no-opés) est indiagnosticable
+    // sinon. Le mismatch coupe la découverte — le caller affiche « VERSION MISMATCH — RELOAD ».
+    if (data.v !== PROTOCOL_VERSION) {
+      callbacks.onVersionMismatch();
+      return;
+    }
     if (data.role !== targetRole || knownPeers.has(peerId)) return;
     const peer: DiscoveredPeer = { id: peerId, name: data.name };
     knownPeers.set(peerId, peer);
@@ -66,18 +75,28 @@ export function createTrysteroPairingChannel(options: PairingChannelOptions): Pa
   };
 
   // Reçu quand le peer opposé initie la connexion (clic de chip côté receiver, OU auto-pairing
-  // initié par un controller qui a scanné notre QR). Handshake symétrique : qui reçoit `connect`
-  // confirme par `paired` et se marque pairé. Fallback nom si la présence n'est pas encore arrivée
-  // (l'auto-pairing peut devancer l'échange de présence — évite un pairing asymétrique).
+  // initié par un controller qui a scanné notre QR). Le caller décide via `onPairRequest` : un
+  // receiver déjà pairé refuse → `busy` ciblé (le controller surnuméraire verra une erreur). Sinon
+  // handshake symétrique : on confirme par `paired` et on se marque pairé. Fallback nom si la
+  // présence n'est pas encore arrivée (l'auto-pairing peut devancer l'échange de présence).
   connect.onMessage = (_data, { peerId }): void => {
-    void paired.send({ name: deviceName }, { target: peerId });
     const peer = knownPeers.get(peerId) ?? { id: peerId, name: 'PLAYER' };
+    if (!callbacks.onPairRequest(peer)) {
+      void busy.send(null, { target: peerId });
+      return;
+    }
+    void paired.send({ name: deviceName }, { target: peerId });
     callbacks.onPaired(peer);
   };
 
   // Reçu côté receiver : confirmation du controller sélectionné.
   paired.onMessage = (data, { peerId }): void => {
     callbacks.onPaired({ id: peerId, name: data.name });
+  };
+
+  // Reçu côté initiateur : notre `connect` a été refusé (le peer distant est déjà pairé).
+  busy.onMessage = (_data, { peerId }): void => {
+    if (knownPeers.has(peerId)) callbacks.onBusy();
   };
 
   start.onMessage = (_data, { peerId }): void => {

@@ -61,6 +61,16 @@ export default tseslint.config(
       '@typescript-eslint/no-base-to-string': 'off',
     },
   },
+  // Tests unitaires (vitest) : accéder aux mocks (`cb.onFoo.mock`, `vi.fn` passés en valeur)
+  // déclenche `unbound-method` — c'est l'idiome vitest, pas un bug de `this`. Les helpers de test
+  // n'ont pas besoin de types de frontière explicites.
+  {
+    files: ['src/**/*.test.ts'],
+    rules: {
+      '@typescript-eslint/unbound-method': 'off',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+    },
+  },
   // CLAUDE.md §5 : shared/ sans imports UI/rendu — encodé dans le lint
   {
     files: ['src/shared/**/*.ts'],

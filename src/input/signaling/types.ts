@@ -5,19 +5,36 @@ export type PeerRole = 'controller' | 'receiver';
  * Phase du cycle de pairing — **source unique de vérité** poussée par `pairingHost` via son
  * callback `onPhase`. L'UI (shell DOM) ne décide rien, elle rend la phase :
  * `searching` (QR / recherche) → `pairing` (peer découvert, connexion auto en cours, pastille) →
- * `paired` (connecté). Les phases `reconnecting`/`error` s'insèreront ici (robustesse, à venir).
+ * `paired` (connecté). `error` (timeout / busy / version — bouton RETRY) et `reconnecting`
+ * (peer pairé perdu, on tente de recoller — câblé au PR 5) sont les états de robustesse.
  */
-export type PairingPhase = 'searching' | 'pairing' | 'paired';
+export type PairingPhase = 'searching' | 'pairing' | 'paired' | 'reconnecting' | 'error';
 
-/** Snapshot de phase poussé vers l'UI — `peerName` non-nul dès `pairing`. */
+/**
+ * Cause d'un échec de pairing (phase `error`) — pilote le message et l'affordance de reprise :
+ * `timeout` (personne dans la room / handshake muet), `busy` (le receiver a déjà un controller),
+ * `version` (build distant incompatible — cf. `PROTOCOL_VERSION`).
+ */
+export type PairingErrorReason = 'timeout' | 'busy' | 'version';
+
+/** Snapshot de phase poussé vers l'UI — `peerName` non-nul dès `pairing`, `errorReason` en `error`. */
 export interface PairingStatus {
   readonly phase: PairingPhase;
   readonly peerName: string | null;
+  readonly errorReason?: PairingErrorReason;
 }
+
+/**
+ * Version du protocole de pairing embarquée dans `presence`. Les actions ajoutées au fil du temps
+ * (`busy`, plus tard `ping`) no-opent silencieusement face à un vieux build ; comparer la version
+ * dès la présence rend le mismatch diagnosticable (toast « VERSION MISMATCH — RELOAD ») au lieu
+ * d'un pairing qui échoue sans raison visible. À incrémenter à chaque changement de wire-format.
+ */
+export const PROTOCOL_VERSION = 1;
 
 // Types alias (pas interfaces) : Trystero contraint ses payloads à `JsonValue`, et seuls les
 // alias reçoivent une signature d'index implicite compatible en TypeScript.
-export type PresencePayload = { role: PeerRole; name: string };
+export type PresencePayload = { role: PeerRole; name: string; v: number };
 export type PairedPayload = { name: string };
 
 /** Peer du rôle opposé annoncé via `presence` — ce que l'UI du receiver liste comme chip cliquable. */
@@ -29,8 +46,18 @@ export interface DiscoveredPeer {
 export interface PairingChannelCallbacks {
   /** Un peer du rôle opposé s'est annoncé dans la room. */
   onPeerDiscovered(peer: DiscoveredPeer): void;
-  /** Un peer a quitté la room — pairé ou non, au caller de décider (pas de reconnexion, hors scope). */
+  /** Un peer a quitté la room — pairé ou non, au caller de décider. */
   onPeerLost(peerId: string): void;
+  /**
+   * Un peer demande la connexion (`connect` reçu). Le caller décide s'il accepte : le receiver
+   * refuse un controller surnuméraire (déjà pairé) → le canal répond `busy` à ce peer précis.
+   * Retour `true` = accepté (le canal confirme par `paired` et déclenche `onPaired`).
+   */
+  onPairRequest(peer: DiscoveredPeer): boolean;
+  /** Notre `connect` a été refusé (le peer distant est déjà pairé) — remonter une erreur `busy`. */
+  onBusy(): void;
+  /** Un peer annonce une version de protocole incompatible (`presence.v`) — build distant à recharger. */
+  onVersionMismatch(): void;
   /** Handshake `connect` → `paired` abouti — les deux côtés le reçoivent. */
   onPaired(peer: DiscoveredPeer): void;
   /** Le peer distant a lancé la partie (action `start`). */
