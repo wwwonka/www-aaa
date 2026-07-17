@@ -40,13 +40,18 @@ nouveau fichier qui référence l'ancien, pas une édition en place.
   frame 2 (conflit VAO avec Babylon).
 - `2026-07-07-reorganisation-src.md` — proposition de réorganisation de `src/`.
 
-## `progress/` — vivant, se périme vite
+## `plans/` — plans d'implémentation actionnables (vivant, todo)
 
-Jamais "la vérité archi actuelle" (ça, c'est `architecture/`). Mis à jour en
-continu au fil des étapes livrées.
+Les plans plus ou moins décidés, à exécuter. Complément de `decisions/` : celui-ci
+dit le *comment / quoi ensuite* (actionnable), pas le *pourquoi tranché*. Jamais
+"la vérité archi actuelle" (ça, c'est `architecture/`). Convention : chaque plan
+démarre par un en-tête **`Statut: proposé | décidé | en cours | livré`** + des
+**cases à cocher par phase**, cochées au fil de la livraison.
 
-- `fable-brief-demo.md` — **source de vérité de l'état d'avancement** (coché,
-  daté, prochaine étape, pièges pour le prochain agent).
+- `input-system-agnostic.md` — système d'input agnostique (multi-sources : tactile,
+  manette gamepad-agnostic) + décomposition d'`AppHost`. Plan phasé.
+- `fable-brief-demo.md` — **source de vérité de l'état d'avancement** de la démo Fable
+  (coché, daté, prochaine étape, pièges pour le prochain agent).
 - `design-etapes-5-6.md` — conception des étapes 5 (joysticks/transport RTC)
   et 6 (handoff snapshot/ACK), jusqu'à leur livraison.
 

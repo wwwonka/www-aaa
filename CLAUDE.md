@@ -139,5 +139,5 @@ Ce fichier reste volontairement minimal. Pour le détail : `docs/README.md`
 - `docs/onboarding.md` — passation, à lire en premier par tout nouvel agent.
 - `docs/architecture/` — référence stable (comment le système fonctionne).
 - `docs/design/` — le jeu (mécanique, moves, esthétique).
-- `docs/decisions/` — write-once, datées (une question tranchée).
-- `docs/progress/` — vivant, se périme vite (état d'avancement, conception en cours).
+- `docs/decisions/` — write-once, datées (une question tranchée : le *pourquoi*).
+- `docs/plans/` — plans d'implémentation actionnables (le *comment/quoi ensuite*), vivants ; en-tête `Statut` + cases à cocher par phase.

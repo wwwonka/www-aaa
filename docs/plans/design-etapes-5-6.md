@@ -2,7 +2,7 @@
 
 > Document de conception exécutable, rédigé le 2026-07-07 à partir du code réel de la
 > branche `feature/title-screen-theatre`. Objectif : qu'un agent n'ayant que `CLAUDE.md`,
-> `docs/progress/fable-brief-demo.md` et ce document puisse implémenter les étapes 5 et 6 **sans
+> `docs/plans/fable-brief-demo.md` et ce document puisse implémenter les étapes 5 et 6 **sans
 > décision architecturale restante**. Le playbook CLAUDE.md §15 s'applique toujours :
 > présenter ce design (ou ses ajustements) et attendre le go avant de coder chaque
 > sous-étape.

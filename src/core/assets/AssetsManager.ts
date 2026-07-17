@@ -1,7 +1,7 @@
 import { openAssetDb, getAsset, putAsset } from './assetDb';
 import { assetPath } from './assetPath';
-import type { AssetNamespace, AssetManifest } from '../../_dev/vite-asset-manifest-plugin';
-import type { SystemLifecycle } from './systems/SystemLifecycle';
+import type { AssetNamespace, AssetManifest } from '../../../_dev/vite-asset-manifest-plugin';
+import type { SystemLifecycle } from '../systems/SystemLifecycle';
 
 interface FlatEntry {
   path: string;

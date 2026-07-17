@@ -24,11 +24,11 @@ if (import.meta.env.DEV && flags.monolith) {
     new ControllerHost().start(flags, ctx);
   } else {
     const { AppHost } = await import('./app/AppHost');
-    const { assetsManager, renderApi } = await new AppHost().start(flags, ctx);
+    const { assetsManager, renderApi, inputHub, simControl } = await new AppHost().start(flags, ctx);
 
     if (import.meta.env.DEV) {
       const { initDevMode } = await import('./_dev/initDev');
-      initDevMode({ assetsManager, renderApi });
+      initDevMode({ assetsManager, renderApi, inputHub, simControl, flags });
     }
   }
 }

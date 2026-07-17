@@ -97,7 +97,7 @@
 > Le playbook CLAUDE.md §15 s'applique : critique d'architecture + validation utilisateur
 > AVANT d'implémenter.
 >
-> - **Étape 5a** (2026-07-07) — **SAB de contrôle + dispatcher** (`docs/progress/design-etapes-5-6.md`
+> - **Étape 5a** (2026-07-07) — **SAB de contrôle + dispatcher** (`docs/plans/design-etapes-5-6.md`
 >   §A.4/A.5) : constantes `CTRL_*` + `ACTION_ID` (`shared/constants.ts`), `createControlSAB`
 >   (`core/sab-manager.ts`), écrivains main-thread `writeAxes`/`pushAction`
 >   (`input/controlChannel.ts`), `drainControl` en tête de `stepOnce` dans `GameSim`
@@ -163,7 +163,7 @@
 >   timeout), tier low, vrais devices.
 >
 > **La conception complète des étapes 5 et 6 est déjà faite et validée** (2026-07-07) :
-> `docs/progress/design-etapes-5-6.md` — pipeline input (SAB de contrôle, transport binaire,
+> `docs/plans/design-etapes-5-6.md` — pipeline input (SAB de contrôle, transport binaire,
 > dispatcher), protocole de handoff (FSM d'autorité, format de snapshot, API sim), ordre
 > d'implémentation en sous-étapes 5a/5b/6a/6b. L'implémenteur suit ce document ; le
 > playbook §15 reste dû à chaque sous-étape (présenter les ajustements, attendre le go).

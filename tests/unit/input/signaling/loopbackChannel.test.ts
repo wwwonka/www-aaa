@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLoopbackChannel, LoopbackHub } from './loopbackChannel';
-import { PROTOCOL_VERSION } from './types';
-import type { DiscoveredPeer, PairingChannelCallbacks, PeerRole } from './types';
+import { PROTOCOL_VERSION } from '../../../../src/input/signaling/types';
+import type { DiscoveredPeer, PairingChannelCallbacks, PeerRole } from '../../../../src/input/signaling/types';
 
 const ROOM = 'ABCDE';
 

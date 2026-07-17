@@ -6,30 +6,29 @@ import type { AppContext } from './platform/ContextManager';
 import { registerServiceWorker } from './platform/serviceWorkerRegister';
 import { setupPwaExperience } from './platform/pwa/_index';
 import { appOrchestrator } from '../core/AppOrchestrator';
-import type { AppState, AppEvent } from '../core/AppOrchestrator';
-import { createAssetsManager } from '../core/AssetsManager';
-import type { AssetsManagerApi } from '../core/AssetsManager';
-import { allocateSystems } from '../core/SystemAllocator';
+import type { AppEvent } from '../core/AppOrchestrator';
+import { createAssetsManager } from '../core/assets/AssetsManager';
+import type { AssetsManagerApi } from '../core/assets/AssetsManager';
 import type { SystemHostApi } from '../core/SystemHost.worker';
 import type { QueryFlags } from './platform/queryFlags';
-import type { SimulationWorkerApi } from '../sim/simulation.worker';
-import { setupPairingHost } from './pairingHost';
-import type { PairingHost } from './pairingHost';
-import { ShellHost } from './shell/ShellHost';
-import { startQrScanner, type QrScannerHandle } from '../input/signaling/qrScanner';
-import { createHandoffCoordinator } from './HandoffCoordinator';
-import type { HandoffCoordinator } from './HandoffCoordinator';
 import { generateDeviceName, persistentRoomCode } from '../input/signaling/identity';
 import { createControlSAB } from '../core/sab-manager';
-import { writeAxes } from '../input/controlChannel';
-import { benchmarkCompute, resolveTier } from './platform/workerStrategy';
+import type { InputHub } from '../input/InputHub';
+import { setupPairing } from './boot/pairing';
+import type { SimControl } from './boot/simControl';
+import { benchmarkDevice } from './boot/deviceBenchmark';
+import { startRenderThread } from './boot/renderThread';
+import { createDeferredSim } from './boot/simControl';
+import { setupScreens } from './boot/screens';
+import { setupSoloMode } from './boot/soloMode';
 import { runWhenIdle } from './platform/idle';
-import { removeBootSplash } from './boot/bootSplash';
 
 /**
- * Boots the app shell: detects the runtime context, installs browser guards, spins up the
- * assets manager (worker or inline, per {@link allocateSystems}), transfers the canvas to the
- * render worker, and wires the orchestrator's screen transitions to the renderer.
+ * Chef d'orchestre du boot receiver/solo : enchaîne une séquence d'étapes nommées et déléguées —
+ * benchmark + topologie (`boot/deviceBenchmark`), thread de rendu (`boot/renderThread`), simulation
+ * différée (`boot/simControl`), câblage de contrôle (`setup/pairing`), transitions d'écran
+ * (`setup/screens`) et déblocage solo/manette (`setup/soloMode`). Ne contient plus de logique propre,
+ * seulement l'ordre. Réservé au receiver/solo (le controller pur boote via `ControllerHost`).
  */
 export class AppHost {
   /**
@@ -43,7 +42,12 @@ export class AppHost {
   async start(
     flags: QueryFlags | undefined,
     ctx: AppContext,
-  ): Promise<{ assetsManager: AssetsManagerApi; renderApi: RenderWorkerApi }> {
+  ): Promise<{
+    assetsManager: AssetsManagerApi;
+    renderApi: RenderWorkerApi;
+    inputHub: InputHub;
+    simControl: SimControl;
+  }> {
     // Mobile en URL de base : receiver qui est aussi sa propre manette (joysticks tactiles
     // locaux). Débloque PLAY sans pairing + autorité locale (§B.5). Faux sur desktop (manette
     // requise).
@@ -51,28 +55,9 @@ export class AppHost {
     installBrowserGuards();
     void registerServiceWorker(ctx.runtime);
 
-    // Tier de performance (CLAUDE.md §3) : micro-benchmark boot + hardwareConcurrency en
-    // secours, `?forceTier` (DEV) en override — AVANT tout spawn, il décide de la topologie
-    // (tier low = worker unifié Render+Sim + systèmes agiles inline).
-    const forcedTier = import.meta.env.DEV ? (flags?.forceTier ?? null) : null;
-    const opsPerMs = benchmarkCompute();
-    const tier = resolveTier(opsPerMs, navigator.hardwareConcurrency, forcedTier);
-    console.log(
-      `[AppHost] tier=${tier} (bench ${Math.round(opsPerMs)} ops/ms, ` +
-        `${navigator.hardwareConcurrency} cœurs${forcedTier ? ', forcé' : ''})`,
-    );
-
-    // SystemAllocator décide si les systèmes "agiles" (AssetsManager aujourd'hui) tournent dans
-    // un SystemHost worker dédié ou inline sur le main thread, selon hardwareConcurrency et la
-    // règle N-1 — voir docs/architecture/system-allocator.md. Sur les appareils avec assez de cœurs, ça évite
-    // au warm-up (transactions IDB + fetch par asset) de se battre pour les ticks JS du main
-    // thread pendant que Babylon/PixiJS bootstrapent, ni pour ceux du render worker pendant
-    // qu'il compile ses shaders ; sur les appareils à peu de cœurs, ça évite un 3ᵉ thread inutile.
-    // Un tier low mesuré force l'inline même si le compte de cœurs promettait mieux.
-    const allocation =
-      tier === 'low'
-        ? { mode: 'inline' as const, systems: ['assetsManager' as const] }
-        : allocateSystems(navigator.hardwareConcurrency, ['assetsManager'] as const);
+    // Étape 1 (CLAUDE.md §3) : benchmark de perf + décision de topologie de threads, AVANT tout
+    // spawn (voir boot/deviceBenchmark). Le SystemAllocator y place aussi les systèmes agiles.
+    const { tier, allocation } = benchmarkDevice(flags);
     const assetsManager: AssetsManagerApi =
       allocation.mode === 'worker'
         ? ((await Comlink.wrap<SystemHostApi>(
@@ -94,24 +79,8 @@ export class AppHost {
       ),
     );
 
-    const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-
-    // Taille physique initiale avant le transfert — le worker n'a plus accès à window après
-    const dpr = window.devicePixelRatio ?? 1;
-    canvas.width = Math.round(window.innerWidth * dpr);
-    canvas.height = Math.round(window.innerHeight * dpr);
-
-    const offscreen = canvas.transferControlToOffscreen();
-
-    const renderWorker = new Worker(new URL('../render/render.worker.ts', import.meta.url), {
-      type: 'module',
-      // Le nom reflète la topologie réelle dans DevTools/Web Inspector : en tier low ce
-      // worker héberge aussi la simulation (fusion, docs/architecture/worker-adaptive-strategy.md).
-      name: tier === 'low' ? 'Render+SimWorker' : 'RenderWorker',
-    });
-    const renderApi = Comlink.wrap<RenderWorkerApi>(renderWorker);
-
-    await renderApi.init(Comlink.transfer(offscreen, [offscreen]));
+    // Étape 2 : démarre le thread de rendu (canvas → offscreen, spawn worker, init, miroir survol UI).
+    const { renderApi, renderWorker, canvas, isOverGameUI } = await startRenderThread(tier);
 
     // Identité de session : le receiver résout son code de room dès le boot (le QR est construit une
     // seule fois avec l'overlay shell) mais ne joint la room qu'à OPEN_PAIRING (voir pairingHost).
@@ -136,273 +105,39 @@ export class AppHost {
     const controlSab = createControlSAB();
     const controlView = new Int32Array(controlSab);
 
-    // FSM d'autorité (§B.1) — créée après simControl ; les callbacks du pairing la referment
-    // en `let` (le canal peut recevoir avant... non : join → paired → handoff, jamais avant).
-    let handoff: HandoffCoordinator | null = null;
+    // Simulation (boids + Havok) : façade de contrôle à init différée title-first (voir
+    // boot/simControl). `initSim` sera déclenché en idle plus bas, après `startUp()`.
+    const { sim: simControl, initReal: initSim } = createDeferredSim({ tier, controlSab, renderApi });
 
-    // « USE DEVICE AS CONTROLLER » : un mobile solo (selfControlled) bascule en controller après
-    // avoir scanné le QR d'un autre écran. Ce flag DÉSARME l'autorité locale — l'input part en RTC
-    // vers le receiver distant, et la sim locale ne steppe pas (le receiver est l'autorité).
-    let actingAsController = false;
-
-    // Shell applicatif en DOM/CSS (main thread) : toasts, gate d'orientation, joysticks + START (le
-    // pairing suivra). Le tactile n'existe que sur les devices à joysticks. Dépendance circulaire
-    // (shell → `pairing.sendInput` ; pairing → `shell.showToast`) résolue par un holder : les
-    // callbacks du shell lisent `pairing` bien après son affectation.
-    const shellHost = new ShellHost({
-      usesTouchInput: selfControlled,
-      onInput: (x, z) => pairing.sendInput(x, z),
-      onStart: () => {
-        // START shell (controller) : lance la partie ET propage au peer pairé (sync, comme le PLAY
-        // intercepté dans setSendToAsm) — le receiver enchaîne sur IN_GAME.
-        pairing.notifyLocalPlay();
-        appOrchestrator.send({ type: 'PLAY' });
-      },
-      // SCAN AGAIN est réservé au controller pur (overlay receiver → RETRY seul, sur sa propre room).
-      pairing: { role: shellRole, pageUrl, roomCode, deviceName, onRetry: () => pairing.retry() },
-    });
-
-    const pairing: PairingHost = setupPairingHost({
-      showToast: (message) => shellHost.showToast(message),
-      role: shellRole,
+    // Tout le câblage de contrôle du device : shell DOM, hub d'input (tactile + manette), pairing
+    // réseau, FSM d'autorité (handoff), scanner « use as controller », interception setSendToAsm.
+    const { shellHost, handoff: boundHandoff, isActingAsController, inputHub } = await setupPairing({
+      renderApi,
+      controlView,
+      sim: simControl,
+      selfControlled,
+      shellRole,
       roomCode,
       deviceName,
-      onPhase: (status): void => {
-        shellHost.setPairingStatus(status);
-        // Miroir vers le prompt du Title Pixi (« CONNECT A CONTROLLER » ⇄ « START GAME ») —
-        // même comportement que l'ancien setPairingPhase côté worker.
-        if (status.phase === 'paired') void renderApi.setControllerPaired(status.peerName);
-        else if (status.phase === 'searching') void renderApi.setControllerPaired(null);
-      },
-      // Axes → SAB local (policy latest-wins, pipeline §7 de bout en bout).
-      applyAxes: (x, z): void => writeAxes(controlView, x, z),
-      // Solo mobile : ce device EST l'autorité en permanence → les joysticks tactiles écrivent le
-      // SAB local (pas de réseau). Sauf s'il a basculé en controller (`actingAsController`) : alors
-      // l'input part en RTC. Sinon, l'autorité suit la FSM de handoff (§B.5).
-      isLocalAuthority: () => !actingAsController && (selfControlled || (handoff?.isActive() ?? false)),
-      onHandoffRequest: () => handoff?.onRemoteRequest(),
-      onHandoffState: (buf) => handoff?.onRemoteState(buf),
-      onHandoffAck: () => handoff?.onRemoteAck(),
-      onPairedPeerLost: () => handoff?.onPeerLost(),
+      pageUrl,
     });
 
-    // Scanner QR in-app (« USE DEVICE AS CONTROLLER ») — overlay DOM caméra (main thread). Au scan
-    // d'un QR de receiver, on isole le code de room et on rejoint à chaud en controller. Le receiver
-    // (en pairing) découvrira ce controller comme chip et confirmera (§Part B).
-    let controllerScanner: QrScannerHandle | null = null;
-    const openControllerScanner = (): void => {
-      if (controllerScanner !== null) return; // déjà ouvert
-      controllerScanner = startQrScanner({
-        onCode: (code) => {
-          controllerScanner = null;
-          actingAsController = true;
-          // Bascule immédiate en présentation controller shell (START DOM) — le scanner s'est déjà
-          // fermé, on ne revient pas au menu title. Le toast « CONNECTED » suit au pairing.
-          shellHost.setControllerMode(true);
-          shellHost.showToast('CONNECTING…');
-          pairing.joinAsController(code);
-        },
-        onError: (err) => {
-          controllerScanner = null;
-          console.warn('[AppHost] scanner caméra indisponible:', err);
-          shellHost.showToast('CAMERA UNAVAILABLE');
-        },
-        onClose: () => {
-          controllerScanner = null;
-        },
-      });
-    };
-
-    await renderApi.setSendToAsm(
-      Comlink.proxy((event: AppEvent) => {
-        // PLAY HERE / BRING IT BACK : l'autorité est orthogonale à l'AppState — l'événement
-        // va à la FSM de handoff, jamais à l'orchestrateur (les transitions TRANSFER /
-        // TRANSFER_BACK sont émises par la FSM au bon moment du protocole).
-        if (event.type === 'REQUEST_HANDOFF') {
-          handoff?.requestHandoff();
-          return;
-        }
-        // « USE DEVICE AS CONTROLLER » : ouvre le scanner, ne touche pas à l'AppState (intercepté).
-        if (event.type === 'USE_AS_CONTROLLER') {
-          openControllerScanner();
-          return;
-        }
-        // Un PLAY local (START GAME / START) doit aussi lancer la partie sur le peer pairé —
-        // l'action réseau part d'ici, le `onStart` distant n'émet que le PLAY local (pas d'écho).
-        if (event.type === 'PLAY') pairing.notifyLocalPlay();
-        appOrchestrator.send(event);
-      }),
-    );
-
-    // Miroir du survol UI poussé par le render worker — lu synchroniquement par le handler
-    // dblclick→plein écran des PWA desktop (voir platform/pwa/AppWindowFullscreen.ts).
-    let overGameUI = false;
-    await renderApi.setOverGameUI(
-      Comlink.proxy((over: boolean) => {
-        overGameUI = over;
-      }),
-    );
-
-    // xstate émet un nouveau snapshot à chaque `.send()`, y compris les events ASSET_PROGRESS du
-    // warmUp() parallélisé (un par asset) — sans déduplication, showScreen() (et donc
-    // playAnimation côté Worker) se déclencherait une fois par asset au lieu d'une fois par
-    // vrai changement d'écran.
-    // Le miroir searching ⇄ paired vers le prompt du title (setControllerPaired) vit dans le
-    // câblage `onPhase` ci-dessus — ici on ne relaye que les changements d'écran.
-    // Simulation (boids + Havok) — les DEUX rôles la spawnent et l'initialisent (préchauffe
-    // wasm ; le controller en a besoin dès le premier handoff, §B.5), mais seul le device
-    // AUTORITÉ la démarre : à aucun instant deux sims ne steppent (CLAUDE.md §4).
-    // Topologie selon le tier : worker dédié (`high`) ou hébergée dans le worker Render+Sim
-    // (`low`) — même simHost derrière (src/sim/simHost.ts).
-    type SimControl = {
-      readonly ready: Promise<void>;
-      start(): void;
-      stop(): void;
-      /** Snapshot de handoff (§B.3) — le buffer revient par transfert. */
-      capture(): Promise<ArrayBuffer>;
-      /** Restaure un snapshot — le buffer part en transfert (inutilisable ensuite côté main). */
-      restore(buf: ArrayBuffer): Promise<void>;
-    };
-    const createSimControl = (): SimControl => {
-      if (tier === 'high') {
-        const simApi = Comlink.wrap<SimulationWorkerApi>(
-          new Worker(new URL('../sim/simulation.worker.ts', import.meta.url), {
-            type: 'module',
-            name: 'SimulationWorker',
-          }),
-        );
-        return {
-          // Buffers SAB relayés au render worker (mémoire partagée, zéro copie).
-          ready: simApi.init(controlSab).then(async (buffers) => {
-            await renderApi.attachGameBuffers(buffers);
-          }),
-          start: () => void simApi.start(),
-          stop: () => void simApi.stop(),
-          capture: () => simApi.capture(),
-          restore: (buf) => simApi.restore(Comlink.transfer(buf, [buf])),
-        };
-      }
-      return {
-        ready: renderApi.simInit(controlSab).then(() => undefined),
-        start: () => void renderApi.simStart(),
-        stop: () => void renderApi.simStop(),
-        capture: () => renderApi.simCapture(),
-        restore: (buf) => renderApi.simRestore(Comlink.transfer(buf, [buf])),
-      };
-    };
-    // Sim différée title-first (PR 3) : façade paresseuse — même interface, mais le spawn
-    // worker + compile wasm ne partent qu'en idle après `startUp()` (le title peint d'abord).
-    // Les appels arrivés avant l'init s'enfilent sur la promesse dans l'ordre d'émission ;
-    // PLAY attend déjà `ready`, comportement identique.
-    let resolveSimReal!: (real: SimControl) => void;
-    const simReal = new Promise<SimControl>((resolve) => {
-      resolveSimReal = resolve;
-    });
-    const simControl: SimControl = {
-      ready: simReal.then((real) => real.ready),
-      start: () => void simReal.then((real) => real.start()),
-      stop: () => void simReal.then((real) => real.stop()),
-      capture: () => simReal.then((real) => real.capture()),
-      restore: (buf) => simReal.then((real) => real.restore(buf)),
-    };
-    // Erreur froide (wasm indisponible…) : loggée, le title reste fonctionnel — PLAY mènera
-    // à une arène vide plutôt qu'à un boot cassé.
-    simControl.ready.catch((err: unknown) => console.error('[AppHost] sim init failed:', err));
-
-    handoff = createHandoffCoordinator({
-      role: shellRole,
-      sim: simControl,
-      sendRequest: () => pairing.sendHandoffRequest(),
-      sendState: (buf) => pairing.sendHandoffState(buf),
-      sendAck: () => pairing.sendHandoffAck(),
-      showToast: (msg) => shellHost.showToast(msg),
-      // Avec les joysticks en DOM (transparents sur le canvas), il n'y a plus de fond opaque à
-      // basculer : « game mode » est automatique. Le handoff-in (amener le jeu au tél.) réactivera
-      // la présentation controller via le shell quand il sera câblé (§B.5, futur).
-      setGamepadGameMode: () => {},
-    });
-    const boundHandoff = handoff;
-
-    let lastScreenState: string | undefined;
-    let lastSentScreen: string | undefined;
-    appOrchestrator.subscribe((snapshot) => {
-      if (snapshot.value === lastScreenState) return;
-      const wasInGame = lastScreenState === 'IN_GAME';
-      lastScreenState = snapshot.value as string;
-      // PAIRING_MODE est un overlay shell DOM (main thread) : le worker ne le connaît plus, le
-      // title reste affiché dessous. Et au retour (CLOSE_PAIRING) on ne renvoie pas l'écran déjà
-      // affiché — ScreenManager rejouerait onLeave/onEnter, donc le reveal du title.
-      if (snapshot.value !== 'PAIRING_MODE' && snapshot.value !== lastSentScreen) {
-        lastSentScreen = snapshot.value as string;
-        // Le splash statique (boot-splash.html) tombe au premier écran réellement monté
-        // dans le canvas — `showScreen` résout une fois le screen construit côté worker.
-        void renderApi.showScreen(snapshot.value as AppState).then(removeBootSplash);
-      }
-      if (snapshot.value === 'IN_GAME') {
-        // Garde d'autorité (§B.1) : le controller entre aussi en IN_GAME au START croisé,
-        // mais seul le device ACTIVE steppe — sa sim locale reste initialisée et figée. Un mobile
-        // solo basculé en controller (`actingAsController`) ne steppe pas non plus : le receiver
-        // distant est l'autorité.
-        void simControl.ready.then(() => {
-          if (!actingAsController && boundHandoff.isActive()) simControl.start();
-        });
-      } else if (wasInGame) {
-        simControl.stop();
-        // §A.6 : pas d'axes fantômes à la reprise (pause, handoff) — la sim est arrêtée
-        // mais le SAB garde sa dernière valeur sinon.
-        writeAxes(controlView, 0, 0);
-      }
-    });
+    // Transitions d'écran + start/stop de la sim, pilotés par l'AppState (voir setup/screens).
+    setupScreens({ renderApi, sim: simControl, handoff: boundHandoff, isActingAsController, controlView });
     appOrchestrator.startUp();
 
     // Init réelle de la sim en idle (title-first) : le premier snapshot vient de partir vers
     // le render worker — le spawn sim/wasm ne lui dispute plus le boot.
-    runWhenIdle(() => resolveSimReal(createSimControl()));
+    runWhenIdle(initSim);
 
-    // `?dev` (build DEV seulement — en prod ce bloc est tree-shaké et la garde `hasController`
-    // reste le seul chemin vers IN_GAME) : controller simulé pour débloquer PLAY + pilotage
-    // clavier de la sphère de contrôle, comme en monolith.
-    if (import.meta.env.DEV && flags?.dev) {
-      appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' });
-      void renderApi.setControllerPaired('DEV');
-      const { attachKeyboardSimControls, attachSnapshotDevKeys } = await import(
-        '../_dev/inspectors/simControls'
-      );
-      // Le clavier dev emprunte le pipeline prod (SAB + dispatcher), pas un canal parallèle.
-      attachKeyboardSimControls((x, z) => writeAxes(controlView, x, z));
-      // C/R : round-trip de snapshot via la vraie surface Comlink (transfert compris).
-      attachSnapshotDevKeys(
-        () => simControl.capture(),
-        (buf) => simControl.restore(buf),
-      );
-    }
-
-    // Mobile en URL de base : ce device est à la fois l'affichage ET sa propre manette. On débloque
-    // PLAY (garde `hasController`) sans pairing — les joysticks tactiles locaux écrivent le SAB via
-    // l'autorité locale (voir `isLocalAuthority` ci-dessus). Le title passe direct à « START GAME ».
-    if (selfControlled) {
-      appOrchestrator.send({ type: 'CONTROLLER_CONNECTED' });
-      void renderApi.setControllerPaired(deviceName);
-    }
-
-    // Gate d'orientation (mobile solo) : le jeu se joue en landscape. iOS Safari ne peut pas
-    // verrouiller l'orientation en onglet → prompt visuel réactif (shell `RotateGate` DOM).
-    // Détection côté main (`matchMedia`). En portrait, on remet les axes à zéro (soft-pause)
-    // pour ne pas laisser le flock filer sous l'overlay.
-    if (selfControlled) {
-      const portraitMq = window.matchMedia('(orientation: portrait)');
-      const applyOrientation = (): void => {
-        const portrait = portraitMq.matches;
-        shellHost.setPortrait(portrait);
-        if (portrait) writeAxes(controlView, 0, 0);
-      };
-      portraitMq.addEventListener('change', applyOrientation);
-      applyOrientation();
-    }
+    // Déblocage de PLAY sans controller distant (solo tactile OU manette locale) + gate d'orientation.
+    setupSoloMode({ selfControlled, renderApi, shellHost, controlView, deviceName });
 
     mountEventHandlers({ canvas, renderWorker });
-    setupPwaExperience(ctx.runtime, () => overGameUI);
+    setupPwaExperience(ctx.runtime, isOverGameUI);
 
-    return { assetsManager, renderApi };
+    // `inputHub` + `simControl` remontent à `main.ts` pour que `initDev` (DEV only) y branche le
+    // controller simulé + le clavier dev (voir _dev/app/devController). Le `?dev` ne vit plus ici.
+    return { assetsManager, renderApi, inputHub, simControl };
   }
 }

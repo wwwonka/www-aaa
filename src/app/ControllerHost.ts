@@ -67,11 +67,13 @@ export class ControllerHost {
       });
     };
 
-    // Même holder qu'AppHost pour la dépendance circulaire shell ⇄ pairing : les callbacks du
-    // shell lisent `pairing` bien après son affectation.
+    // Même holder qu'AppHost pour la dépendance circulaire shell ⇄ pairing : les callbacks du shell
+    // lisent `pairing` bien après son affectation. ShellHost construit le hub d'input (mêmes sources
+    // partout — manette + tactile) autour du sink : sur le controller, `pairing.sendInput` part
+    // toujours en RTC vers le receiver pairé (pas de sim locale).
     const shellHost = new ShellHost({
       usesTouchInput: true,
-      onInput: (x, z) => pairing.sendInput(x, z),
+      axisSink: (x, z) => pairing.sendInput(x, z),
       onStart: () => {
         // START : lance la partie ET propage au receiver pairé (le `onStart` distant n'émet
         // que le PLAY local, pas d'écho).

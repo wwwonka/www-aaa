@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { PairingOverlay } from './PairingOverlay';
-import type { PairingOverlayOptions } from './PairingOverlay';
+import { PairingOverlay } from '../../../../../src/app/shell/components/PairingOverlay';
+import type { PairingOverlayOptions } from '../../../../../src/app/shell/components/PairingOverlay';
 
 function mount(overrides: Partial<PairingOverlayOptions> = {}) {
   const root = document.createElement('div');

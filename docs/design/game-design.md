@@ -3,7 +3,7 @@
 > Source : réponses de l'utilisateur (juillet 2026). Ce document est la référence
 > narrative/mécanique/esthétique du jeu. Statuts : ✅ LIVRÉ (codé et vérifié),
 > 🎯 CIBLE (design validé, aucun code). Voir `docs/onboarding.md` §0.1 pour le
-> contrat de lecture, et `docs/progress/fable-brief-demo.md` pour l'état d'avancement technique.
+> contrat de lecture, et `docs/plans/fable-brief-demo.md` pour l'état d'avancement technique.
 
 ## Pitch
 

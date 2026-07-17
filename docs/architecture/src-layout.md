@@ -105,9 +105,11 @@
 │  AppOrchestrator.ts  — classe, FSM xstate du Shell + cycle de vie       │
 │                         startUp()/shutDown() (renommé depuis            │
 │                         AppStateMachine.ts/appActor)                    │
-│  AssetsManager.ts    — warm-up IDB des assets statiques (voir doc dédiée)│
-│  assetDb.ts          — wrapper IndexedDB natif, DB AssetsDB             │
-│  assetPath.ts        — (namespace,type,filename) → chemin réel          │
+│  assets/  — mécanisme de cache d'assets, un seul système :             │
+│    AssetsManager.ts  — warm-up IDB des assets statiques (voir doc dédiée)│
+│    assetDb.ts        — wrapper IndexedDB natif, DB AssetsDB             │
+│    assetPath.ts      — (namespace,type,filename) → chemin réel          │
+│    assetCacheFetch.ts — proxy fetch Service Worker (IDB-first, ex-platform)│
 │  SystemAllocator.ts  — décide worker vs inline pour les systèmes agiles │
 │                         selon hardwareConcurrency (règle N-1)           │
 │  SystemHost.worker.ts — host générique, multiplexage lazy get(id)      │

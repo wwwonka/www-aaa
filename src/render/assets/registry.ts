@@ -39,7 +39,7 @@ export function getLoaderEntry(ext: string): RegistryEntry<unknown> | undefined 
 
 /**
  * Default {@link ResourceLoader.resolve} strategy: `fetch('/' + path)` → `Blob`. Relies entirely
- * on the Service Worker (`src/app/platform/assetCacheFetch.ts`) to serve cached bytes from
+ * on the Service Worker (`src/core/assets/assetCacheFetch.ts`) to serve cached bytes from
  * IndexedDB transparently — never reads `assetDb.ts`/IndexedDB directly here, to keep a single
  * source of truth for "is this asset cached".
  *

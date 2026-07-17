@@ -9,7 +9,7 @@ import { setupDevTools } from '../setup';
 import { createGameSim } from '../../sim/GameSim';
 import type { GameSim } from '../../sim/GameSim';
 import { createControlSAB } from '../../core/sab-manager';
-import { writeAxes } from '../../input/controlChannel';
+import { writeAxes } from '../../input/transport/controlChannel';
 import { removeBootSplash } from '../../app/boot/bootSplash';
 import { attachKeyboardSimControls, attachSnapshotDevKeys } from './simControls';
 

@@ -14,8 +14,8 @@ kanban-plugin: board
 
 - [ ] CI nightly build (le moteur doit compiler chaque nuit)
 - [ ] Playwright golden tests (BOOT/TITLE/IN_GAME, maxDiffPixelRatio 0.05)
-- [ ] Étape 5b — joysticks + transport RTC (`docs/progress/design-etapes-5-6.md` partie A)
-- [ ] Étape 6 — handoff snapshot + ACK (`docs/progress/design-etapes-5-6.md` partie B)
+- [ ] Étape 5b — joysticks + transport RTC (`docs/plans/design-etapes-5-6.md` partie A)
+- [ ] Étape 6 — handoff snapshot + ACK (`docs/plans/design-etapes-5-6.md` partie B)
 
 ## En cours
 

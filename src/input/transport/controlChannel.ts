@@ -10,8 +10,8 @@ import {
   CTRL_RING_SLOTS,
   CTRL_RING_SLOT_STRIDE,
   CTRL_FIXED_POINT,
-} from '../shared/constants';
-import type { ActionId } from '../shared/constants';
+} from '../../shared/constants';
+import type { ActionId } from '../../shared/constants';
 
 const clamp = (v: number): number => (v > 1 ? 1 : v < -1 ? -1 : v);
 

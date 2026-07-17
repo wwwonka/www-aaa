@@ -1,0 +1,14 @@
+<!-- Markup des joysticks tactiles virtuels + bouton START, déclaré DÉCLARATIVEMENT dans le HTML
+     (inclus dans index.html via @include). Inerte tant que non cloné : `JoysticksView` en fait un
+     seul `cloneNode(true)` quand un device tactile en a besoin — zéro `createElement` au runtime.
+     Les deux paires base/nub (gauche/droite) sont positionnées par transform ; le style vit dans
+     joysticks.css (chargé par la vue). -->
+<template id="shell-joysticks-template">
+  <div class="shell-joysticks" data-role="surface">
+    <div class="shell-stick-base" data-side="left"></div>
+    <div class="shell-stick-nub" data-side="left"></div>
+    <div class="shell-stick-base" data-side="right"></div>
+    <div class="shell-stick-nub" data-side="right"></div>
+  </div>
+  <button class="shell-start" type="button" data-role="start">START</button>
+</template>

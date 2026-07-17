@@ -2,7 +2,7 @@
 // little-endian : int16 dirX | int16 dirZ | uint16 seq. Le canal Trystero est
 // reliable+ordered (suffisant à ~30 Hz en LAN) ; `seq` prépare un futur canal unordered.
 // Zéro allocation : l'appelant réutilise ses vues et son objet de sortie.
-import { INPUT_AXIS_QUANT } from '../shared/constants';
+import { INPUT_AXIS_QUANT } from '../../shared/constants';
 
 const clamp = (v: number): number => (v > 1 ? 1 : v < -1 ? -1 : v);
 

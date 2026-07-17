@@ -1,5 +1,5 @@
 import { appOrchestrator } from '../core/AppOrchestrator';
-import type { AssetsManagerApi } from '../core/AssetsManager';
+import type { AssetsManagerApi } from '../core/assets/AssetsManager';
 
 /** Dependencies injected into {@link setupDevKeyboardShortcuts}. */
 interface DevKeyboardShortcutDeps {

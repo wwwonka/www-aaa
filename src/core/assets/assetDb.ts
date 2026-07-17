@@ -7,7 +7,7 @@
  * the same database independently of which thread populated it.
  */
 
-import type { AssetNamespace } from '../../_dev/vite-asset-manifest-plugin';
+import type { AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin';
 
 const DB_NAME = 'AssetsDB';
 const DB_VERSION = 3;

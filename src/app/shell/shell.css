@@ -88,46 +88,7 @@
   padding: 0 20px;
 }
 
-/* --- Joysticks dynamiques (flottants, sous le pouce) + START --- */
-.shell-joysticks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none; /* activé seulement en playing */
-  touch-action: none;
-}
-.shell-joysticks--active {
-  pointer-events: auto;
-}
-.shell-stick-base,
-.shell-stick-nub {
-  position: absolute;
-  top: 0;
-  left: 0;
-  border-radius: 50%;
-  opacity: 0;
-  transition: opacity 140ms ease;
-  will-change: transform;
-  /* centrés sur leur point d'ancrage (translate positionne le coin) */
-  margin-left: -70px;
-  margin-top: -70px;
-}
-.shell-stick-base {
-  width: 140px;
-  height: 140px;
-  border: 2px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-}
-.shell-stick-nub {
-  width: 54px;
-  height: 54px;
-  margin-left: -27px;
-  margin-top: -27px;
-  background: rgba(255, 255, 255, 0.35);
-}
-.shell-stick-base--visible,
-.shell-stick-nub--visible {
-  opacity: 1;
-}
+/* Joysticks tactiles + bouton START : voir joysticks.css (chargé par JoysticksView). */
 
 /* --- Pairing overlay : sheet slide-up (receiver) / plein écran en fondu (controller) --- */
 .shell-pairing {
@@ -301,21 +262,3 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
-.shell-start {
-  position: absolute;
-  top: max(28px, 8%);
-  left: 50%;
-  transform: translateX(-50%);
-  pointer-events: auto;
-  display: none;
-  border: none;
-  background: transparent;
-  color: #fff;
-  font-family: inherit;
-  font-size: 48px;
-  letter-spacing: 6px;
-  cursor: pointer;
-}
-.shell-start--visible {
-  display: block;
-}

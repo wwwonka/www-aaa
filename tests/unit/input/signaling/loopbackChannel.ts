@@ -1,11 +1,11 @@
-import { PROTOCOL_VERSION } from './types';
+import { PROTOCOL_VERSION } from '../../../../src/input/signaling/types';
 import type {
   DiscoveredPeer,
   PairingChannel,
   PairingChannelCallbacks,
   PairingChannelOptions,
   PeerRole,
-} from './types';
+} from '../../../../src/input/signaling/types';
 
 // Fake EN MÉMOIRE de {@link PairingChannel} — aucune dépendance réseau (ni Trystero, ni nostr, ni
 // WebRTC). Deux canaux joints à la même room via un {@link LoopbackHub} se découvrent et

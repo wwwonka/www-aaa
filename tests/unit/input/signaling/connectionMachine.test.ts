@@ -8,8 +8,8 @@ import {
   HANDSHAKE_TIMEOUT_MS,
   MAX_HANDSHAKE_ATTEMPTS,
   RETRY_INTERVAL_MS,
-} from './connectionMachine';
-import type { ConnectionPorts, ConnectionStateValue } from './connectionMachine';
+} from '../../../../src/input/signaling/connectionMachine';
+import type { ConnectionPorts, ConnectionStateValue } from '../../../../src/input/signaling/connectionMachine';
 
 const PEER = { id: 'p1', name: 'SWIFT FOX' } as const;
 

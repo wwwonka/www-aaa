@@ -4,7 +4,7 @@ import {
   handleFaviconFetch,
   restoreTransparentFaviconPref,
 } from './pwa/desktop-firefox/transparentFavicon';
-import { handleAssetFetch, loadAssetManifest } from './assetCacheFetch';
+import { handleAssetFetch, loadAssetManifest } from '../../core/assets/assetCacheFetch';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 

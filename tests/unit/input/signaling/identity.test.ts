@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from 'vitest';
-import { generateDeviceName, generateRoomCode, persistentRoomCode } from './identity';
+import { generateDeviceName, generateRoomCode, persistentRoomCode } from '../../../../src/input/signaling/identity';
 
 const ROOM_CODE_RE = /^[ABCDEFGHJKMNPQRSTUVWXYZ23456789]{5}$/;
 

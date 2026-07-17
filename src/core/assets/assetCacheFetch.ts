@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
-import { openAssetDb, getAsset } from '../../core/assetDb';
-import { assetPath } from '../../core/assetPath';
+import { openAssetDb, getAsset } from './assetDb';
+import { assetPath } from './assetPath';
 import type { AssetManifest } from '../../../_dev/vite-asset-manifest-plugin';
 
 let knownPaths: Set<string> = new Set();

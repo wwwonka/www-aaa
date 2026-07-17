@@ -1,7 +1,11 @@
 import { appOrchestrator } from '../core/AppOrchestrator';
-import type { AssetsManagerApi } from '../core/AssetsManager';
+import type { AssetsManagerApi } from '../core/assets/AssetsManager';
 import type { RenderWorkerApi } from '../render/render.worker';
+import type { InputHub } from '../input/InputHub';
+import type { SimControl } from '../app/boot/simControl';
+import type { QueryFlags } from '../app/platform/queryFlags';
 import { setupDevKeyboardShortcuts } from './DevKeyboardShortcutListener';
+import { initDevController } from './app/devController';
 
 let authoringEnabled = false;
 // `setupTheatreBridge` calls `sheet.object(id, config)` per scenario object — Theatre.js throws if
@@ -41,6 +45,9 @@ export async function toggleAuthoringMode(renderApi: RenderWorkerApi): Promise<v
 export function initDevMode(deps: {
   assetsManager: AssetsManagerApi;
   renderApi: RenderWorkerApi;
+  inputHub: InputHub;
+  simControl: SimControl;
+  flags: QueryFlags | undefined;
 }): void {
   setupDevKeyboardShortcuts({
     assetsManager: deps.assetsManager,
@@ -52,5 +59,13 @@ export function initDevMode(deps: {
       if (!authoringEnabled) return;
       void import('./@theatre/export').then(({ exportScenarios }) => exportScenarios());
     },
+  });
+
+  // `?dev` : controller simulé + clavier dev branché dans le hub + touches snapshot (voir devController).
+  void initDevController({
+    flags: deps.flags,
+    renderApi: deps.renderApi,
+    inputHub: deps.inputHub,
+    simControl: deps.simControl,
   });
 }

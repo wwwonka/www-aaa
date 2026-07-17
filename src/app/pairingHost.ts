@@ -4,8 +4,8 @@ import { getIceServers } from '../input/signaling/iceServers';
 import { connectionMachine, derivePhase } from '../input/signaling/connectionMachine';
 import type { ConnectionPorts } from '../input/signaling/connectionMachine';
 import type { PairingChannel, PairingStatus, PeerRole } from '../input/signaling/types';
-import { decodeInput, encodeInput } from '../input/inputCodec';
-import type { DecodedInput } from '../input/inputCodec';
+import { decodeInput, encodeInput } from '../input/transport/inputCodec';
+import type { DecodedInput } from '../input/transport/inputCodec';
 import { INPUT_PAYLOAD_BYTES } from '../shared/constants';
 
 export interface PairingHostOptions {

@@ -25,7 +25,7 @@ Trois tags reviennent partout. Ils sont la chose la plus importante de ce docume
 Le danger n°1 pour toi est d'halluciner : lire une intention (dans CLAUDE.md, dans le
 brief, ici) et croire que le code existe. Ce projet est **très en avance dans sa
 vision, partiellement construit dans les faits**. L'état réel vit dans **un fichier et
-un seul** : l'encadré « État d'avancement » de `docs/progress/fable-brief-demo.md` (avec sa
+un seul** : l'encadré « État d'avancement » de `docs/plans/fable-brief-demo.md` (avec sa
 section « Backlog hors-brief »). Il est la source de vérité — pas ce document, pas
 CLAUDE.md. Ce document ne recopie jamais son contenu : il pointe.
 
@@ -55,8 +55,8 @@ implémenter sans validation.
 | Pipeline input SAB (axes latest-wins + ring ActionId) | ✅ LIVRÉ (5a)      | `src/input/controlChannel.ts`, `drainControl` dans `src/sim/GameSim.ts` |
 | Post-process unifié (dont pixelisation)              | 🚧 STUB             | `src/render/postProcess/unifiedPipeline.ts` (vide)                    |
 | Tier adaptatif (benchmark boot + `?forceTier`)       | ✅ LIVRÉ (4b)       | `src/app/platform/workerStrategy.ts`, `src/sim/simHost.ts`           |
-| Joysticks controller → sim via RTC + ring buffer SAB | 🎯 CIBLE (étape 5)  | conception complète : `docs/progress/design-etapes-5-6.md` (partie A)          |
-| Handoff snapshot + ACK + switch d'autorité           | 🎯 CIBLE (étape 6)  | conception complète : `docs/progress/design-etapes-5-6.md` (partie B)          |
+| Joysticks controller → sim via RTC + ring buffer SAB | 🎯 CIBLE (étape 5)  | conception complète : `docs/plans/design-etapes-5-6.md` (partie A)          |
+| Handoff snapshot + ACK + switch d'autorité           | 🎯 CIBLE (étape 6)  | conception complète : `docs/plans/design-etapes-5-6.md` (partie B)          |
 | Moves du flock (split, dash chargé), 2 cibles        | 🎯 CIBLE            | `docs/design/game-design.md`                                                 |
 
 ### 0.4 La carte des absences — ce qui N'EXISTE PAS
@@ -225,7 +225,7 @@ Le transport des vues est gratuit : structured-cloner une TypedArray adossée à
 arrête-toi et relis cette section.**
 
 Le SAB sim→render fonctionne **sans aucun Atomics**, par décision délibérée (actée dans
-`docs/progress/fable-brief-demo.md`) : la sim est la _seule_ écrivaine, le render est un lecteur
+`docs/plans/fable-brief-demo.md`) : la sim est la _seule_ écrivaine, le render est un lecteur
 latest-wins qui tolère de lire une frame en cours d'écriture (au pire, un boid a une
 matrice d'une demi-frame d'écart pendant 16 ms — invisible). Ajouter des Atomics ici
 coûterait de la latence et de la complexité pour résoudre un problème qu'on a
@@ -490,7 +490,7 @@ gagnant a toujours eu la même forme ici :
 
 Ce document est un instantané ; la passation continue vit dans un fichier que tu dois
 tenir à jour **à chaque étape livrée** : l'encadré « État d'avancement » de
-`docs/progress/fable-brief-demo.md` (coche, date, prochaine étape, pièges signalés au suivant).
+`docs/plans/fable-brief-demo.md` (coche, date, prochaine étape, pièges signalés au suivant).
 L'ancien `AGENT_BOARD.md` (kanban multi-agents) a été supprimé le 2026-07-07 : il
 dupliquait l'encadré du brief et divergeait. Un agent futur — peut-être encore moins
 capable que toi — lira ces fichiers comme tu lis celui-ci. Écris-y ce que tu aurais
@@ -576,7 +576,7 @@ voulu qu'on t'écrive : les pièges, pas les victoires.
 5. **Audio** — worker réel, queue SAB + Atomics (têtes déjà réservées),
    resume-on-gesture dès la conception.
 6. **Étapes du brief** : 5b (joysticks + transport RTC), 6 (handoff snapshot/ACK).
-   Détail : `docs/progress/fable-brief-demo.md` ; conception déjà faite : `docs/progress/design-etapes-5-6.md`.
+   Détail : `docs/plans/fable-brief-demo.md` ; conception déjà faite : `docs/plans/design-etapes-5-6.md`.
 7. **Calibrage des seuils de tier** (`workerStrategy.ts`) — 30k/12k ops/ms posés sur un
    desktop 2026 ; à mesurer sur iPhone/Android réels (le log boot `[AppHost] tier=` est là
    pour ça).

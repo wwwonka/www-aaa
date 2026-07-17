@@ -1,17 +1,23 @@
 import './shell.css';
 import { appOrchestrator } from '../../core/AppOrchestrator';
-import { assetPath } from '../../core/assetPath';
+import { assetPath } from '../../core/assets/assetPath';
 import { Toast } from './components/Toast';
 import { RotateGate } from './components/RotateGate';
-import { Joysticks } from './components/Joysticks';
+import { JoysticksView } from './components/JoysticksView';
 import { PairingOverlay } from './components/PairingOverlay';
+import { setupInput } from '../boot/input';
+import type { InputHub } from '../../input/InputHub';
 import type { PairingStatus, PeerRole } from '../../input/signaling/types';
 
 export interface ShellHostOptions {
   /** Ce device utilise des joysticks tactiles (solo mobile OU controller) → joysticks + gate. */
   readonly usesTouchInput: boolean;
-  /** Axes échantillonnés par les joysticks → sink `pairingHost.sendInput` (SAB local OU RTC). */
-  readonly onInput: (dirX: number, dirZ: number) => void;
+  /**
+   * Sink des axes réduits (`pairingHost.sendInput` : SAB local si autorité, sinon RTC). ShellHost
+   * construit le hub d'input (manette + tactile) autour de ce sink et pilote son cycle de vie selon
+   * l'AppState (tourne en jeu hors portrait, stoppé sinon). Le hub est exposé via {@link ShellHost.inputHub}.
+   */
+  readonly axisSink: (dirX: number, dirZ: number) => void;
   /** START pressé (controller) → lance la partie (PLAY + sync du peer). */
   readonly onStart: () => void;
   /** Identité de session + reprises pour l'overlay de pairing (QR + pastilles) — voir `PairingOverlay`. */
@@ -37,7 +43,8 @@ export class ShellHost {
   private readonly _root: HTMLElement;
   private readonly _toast: Toast;
   private readonly _rotate: RotateGate | null;
-  private readonly _joysticks: Joysticks | null;
+  private readonly _joysticksView: JoysticksView | null;
+  private readonly _hub: InputHub;
   private readonly _pairing: PairingOverlay;
   private _portrait = false;
   private _lastState: string | null = null;
@@ -54,9 +61,10 @@ export class ShellHost {
     this._toast = new Toast(this._root);
     // Gate d'orientation + joysticks : uniquement sur les devices à input tactile.
     this._rotate = opts.usesTouchInput ? new RotateGate(this._root) : null;
-    this._joysticks = opts.usesTouchInput
-      ? new Joysticks(this._root, { onInput: opts.onInput, onStart: opts.onStart })
-      : null;
+    this._joysticksView = opts.usesTouchInput ? new JoysticksView(this._root, opts.onStart) : null;
+    // Hub d'input (manette + tactile) construit autour du sink — la vue existe déjà, donc la
+    // TouchSource peut être branchée. Même câblage sur les deux hosts (voir boot/input).
+    this._hub = setupInput({ axisSink: opts.axisSink, joysticksView: this._joysticksView });
     this._pairing = new PairingOverlay(this._root, {
       ...opts.pairing,
       onClose: () => appOrchestrator.send({ type: 'CLOSE_PAIRING' }),
@@ -72,6 +80,11 @@ export class ShellHost {
       this._pairing.setActive(this._pairingOpen);
       this._sync();
     });
+  }
+
+  /** Le hub d'input construit par ce shell — exposé pour que `initDev` y branche des sources dev. */
+  get inputHub(): InputHub {
+    return this._hub;
   }
 
   /** Phase du cycle de pairing réseau — source unique poussée par `pairingHost`. */
@@ -103,10 +116,16 @@ export class ShellHost {
   private _sync(): void {
     // Gate d'orientation : portrait + en jeu.
     this._rotate?.setActive(this._portrait && this._inGame);
-    // Joysticks : actifs en jeu. START : mode controller, tant qu'on n'est ni en jeu ni sous
-    // l'overlay de pairing (il transparaîtrait à travers le panneau à 97 % d'opacité).
-    this._joysticks?.setActive(this._inGame);
-    this._joysticks?.showStart(this._controllerMode && !this._inGame && !this._pairingOpen);
+    // L'input coule en jeu, sauf en portrait (soft-pause mobile). Le hub possède la boucle rAF ;
+    // son stop émet des axes nuls (pas d'axes fantômes à la reprise). La surface tactile n'écoute
+    // les pointeurs que quand elle est active.
+    const inputActive = this._inGame && !this._portrait;
+    this._joysticksView?.setActive(inputActive);
+    // START : mode controller, tant qu'on n'est ni en jeu ni sous l'overlay de pairing (il
+    // transparaîtrait à travers le panneau à 97 % d'opacité).
+    this._joysticksView?.showStart(this._controllerMode && !this._inGame && !this._pairingOpen);
+    if (inputActive) this._hub.start();
+    else this._hub.stop();
   }
 }
 

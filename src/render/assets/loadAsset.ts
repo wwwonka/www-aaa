@@ -2,7 +2,7 @@ import type { Scene, AbstractMesh, Texture } from '@babylonjs/core/pure';
 import { getLoaderEntry, defaultResolve } from './registry';
 import type { LoaderContext } from './types';
 import type { AnimationTrackSet } from './loaders/AnimationLoader';
-import { assetPath } from '../../core/assetPath';
+import { assetPath } from '../../core/assets/assetPath';
 import type { AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin';
 
 const inFlight = new Map<string, Promise<unknown>>();

@@ -1,4 +1,4 @@
-import type { AssetNamespace } from '../../_dev/vite-asset-manifest-plugin';
+import type { AssetNamespace } from '../../../_dev/vite-asset-manifest-plugin';
 
 /** Synthetic type for files with no subdirectory under a namespace (e.g. `app/app.webmanifest`) — must not appear in the real path. */
 export const MISC_TYPE = 'misc';

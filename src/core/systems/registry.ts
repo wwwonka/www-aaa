@@ -1,4 +1,4 @@
-import { createAssetsManager } from '../AssetsManager';
+import { createAssetsManager } from '../assets/AssetsManager';
 import type { SystemLifecycle } from './SystemLifecycle';
 
 /**
