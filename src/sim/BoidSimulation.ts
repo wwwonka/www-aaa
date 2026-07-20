@@ -20,6 +20,8 @@ export interface BoidSteering {
    * @param velocities - Vélocités courantes (3 floats/boid) — dérivées des positions par l'appelant.
    * @param targetX - Position X de la sphère de contrôle invisible.
    * @param targetZ - Position Z de la sphère de contrôle invisible.
+   * @param wave - Onde de demi-tour en cours, ou `null` : un boid dont le délai court encore
+   *   seek l'ANCIENNE cible de l'onde (réaction en chaîne depuis le nouveau front, voir ReversalWave).
    */
   compute(
     positions: Float32Array,
@@ -28,6 +30,11 @@ export interface BoidSteering {
     targetX: number,
     targetZ: number,
     forcesOut: Float32Array,
+    wave?: {
+      isBoidOnOldTarget(boidIndex: number): boolean;
+      readonly oldTargetX: number;
+      readonly oldTargetZ: number;
+    } | null,
   ): void;
 }
 
@@ -64,7 +71,7 @@ export function createBoidSimulation(capacity: number, arenaHalfExtent: number):
   };
 
   return {
-    compute(positions, velocities, count, targetX, targetZ, forcesOut): void {
+    compute(positions, velocities, count, targetX, targetZ, forcesOut, wave = null): void {
       positionsRef = positions;
       velocitiesRef = velocities;
       grid.rebuild(positions, count);
@@ -79,8 +86,15 @@ export function createBoidSimulation(capacity: number, arenaHalfExtent: number):
         grid.forEachNeighbor(i, visitNeighbor);
 
         // Seek : vélocité désirée plein régime vers la cible, corrigée de la vélocité actuelle.
-        let seekX = targetX - selfX;
-        let seekZ = targetZ - selfZ;
+        // Pendant une onde de demi-tour, un boid pas encore « atteint » garde l'ancienne cible.
+        let tX = targetX;
+        let tZ = targetZ;
+        if (wave !== null && wave.isBoidOnOldTarget(i)) {
+          tX = wave.oldTargetX;
+          tZ = wave.oldTargetZ;
+        }
+        let seekX = tX - selfX;
+        let seekZ = tZ - selfZ;
         const seekDist = Math.sqrt(seekX * seekX + seekZ * seekZ);
         if (seekDist > 1e-3) {
           seekX = (seekX / seekDist) * BOID_SPEED - velX;

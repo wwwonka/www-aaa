@@ -3,7 +3,8 @@ import { InputHub } from '../../../src/input/InputHub';
 import { createControllerFrame } from '../../../src/input/ControllerFrame';
 import type { InputSource, InputSourceKind } from '../../../src/input/sources/InputSource';
 
-// Source factice pilotable : on règle son stick gauche, le hub calcule l'activité depuis la frame.
+// Source factice pilotable : on règle ses DEUX sticks à la même valeur (la locomotion exige les
+// deux sticks actifs — la moyenne rend alors la valeur telle quelle), le hub calcule l'activité.
 class FakeSource implements InputSource {
   readonly kind: InputSourceKind;
   readonly frame = createControllerFrame();
@@ -24,9 +25,15 @@ class FakeSource implements InputSource {
     return this.frame;
   }
 
-  setLeft(x: number, z: number): void {
+  setSticks(x: number, z: number): void {
     this.frame.leftStick.x = x;
     this.frame.leftStick.z = z;
+    this.frame.rightStick.x = x;
+    this.frame.rightStick.z = z;
+  }
+
+  setActions(bitset: number): void {
+    this.frame.actions = bitset;
   }
 }
 
@@ -67,7 +74,7 @@ describe('InputHub — arbitrage latest-active-wins', () => {
     hub.register(pad);
     hub.start();
 
-    pad.setLeft(0.5, 0);
+    pad.setSticks(0.5, 0);
     tick();
 
     expect(sink).toHaveBeenLastCalledWith(0.5, 0);
@@ -83,11 +90,11 @@ describe('InputHub — arbitrage latest-active-wins', () => {
     hub.register(b);
     hub.start();
 
-    a.setLeft(0.5, 0);
+    a.setSticks(0.5, 0);
     tick();
     expect(sink).toHaveBeenLastCalledWith(0.5, 0); // A possède
 
-    b.setLeft(-0.5, 0);
+    b.setSticks(-0.5, 0);
     tick();
     expect(sink).toHaveBeenLastCalledWith(-0.5, 0); // B a bougé en dernier → B possède
 
@@ -96,7 +103,7 @@ describe('InputHub — arbitrage latest-active-wins', () => {
     expect(sink).toHaveBeenLastCalledWith(-0.5, 0);
 
     // B recentre → A (toujours actif) reprend la sortie.
-    b.setLeft(0, 0);
+    b.setSticks(0, 0);
     tick();
     expect(sink).toHaveBeenLastCalledWith(0.5, 0);
   });
@@ -108,9 +115,9 @@ describe('InputHub — arbitrage latest-active-wins', () => {
     hub.register(pad);
     hub.start();
 
-    pad.setLeft(0.5, 0);
+    pad.setSticks(0.5, 0);
     tick();
-    pad.setLeft(0, 0);
+    pad.setSticks(0, 0);
     tick();
 
     expect(sink).toHaveBeenLastCalledWith(0, 0);
@@ -123,7 +130,7 @@ describe('InputHub — arbitrage latest-active-wins', () => {
     hub.register(pad);
     hub.start();
 
-    pad.setLeft(0.8, 0);
+    pad.setSticks(0.8, 0);
     tick();
     sink.mockClear();
 
@@ -135,5 +142,74 @@ describe('InputHub — arbitrage latest-active-wins', () => {
     sink.mockClear();
     tick();
     expect(sink).not.toHaveBeenCalled();
+  });
+});
+
+describe('InputHub — actions (edge-detection, hors arbitrage)', () => {
+  const CONFIRM = 3; // ACTION_ID.CONFIRM — bit `1 << id` dans la frame
+
+  function makeHub(): { hub: InputHub; pad: FakeSource; touch: FakeSource; actions: number[] } {
+    const actions: number[] = [];
+    const pad = new FakeSource('gamepad');
+    const touch = new FakeSource('touch');
+    const hub = new InputHub({
+      axisSink: () => {},
+      actionSink: (id) => actions.push(id),
+    });
+    hub.register(pad);
+    hub.register(touch);
+    hub.start();
+    return { hub, pad, touch, actions };
+  }
+
+  it('émet une action une seule fois par front montant, puis à nouveau après relâche', () => {
+    const { pad, actions } = makeHub();
+
+    pad.setActions(1 << CONFIRM);
+    tick();
+    tick(); // maintien → pas de ré-émission
+    expect(actions).toEqual([CONFIRM]);
+
+    pad.setActions(0);
+    tick(); // relâche
+    pad.setActions(1 << CONFIRM);
+    tick(); // nouvelle pression → nouveau front
+    expect(actions).toEqual([CONFIRM, CONFIRM]);
+  });
+
+  it('voit les actions même quand une AUTRE source possède les axes', () => {
+    const { pad, touch, actions } = makeHub();
+
+    touch.setSticks(0.5, 0); // le tactile prend la main sur les axes
+    tick();
+    pad.setActions(1 << CONFIRM); // bouton manette, sticks manette au neutre
+    tick();
+    expect(actions).toEqual([CONFIRM]);
+  });
+
+  it('au stop, oublie l\'état tenu : une action encore pressée re-fronte à la reprise', () => {
+    const { hub, pad, actions } = makeHub();
+
+    pad.setActions(1 << CONFIRM);
+    tick();
+    expect(actions).toEqual([CONFIRM]);
+
+    hub.stop();
+    hub.start();
+    tick(); // toujours pressée → nouveau front après reprise
+    expect(actions).toEqual([CONFIRM, CONFIRM]);
+  });
+
+  it('sans actionSink, les actions sont ignorées sans erreur et les axes coulent normalement', () => {
+    const axisSink = vi.fn();
+    const hub = new InputHub({ axisSink });
+    const pad = new FakeSource();
+    hub.register(pad);
+    hub.start();
+
+    pad.setActions(1 << CONFIRM);
+    pad.setSticks(0.5, 0);
+    tick();
+    expect(axisSink).toHaveBeenLastCalledWith(0.5, 0);
   });
 });

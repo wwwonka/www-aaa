@@ -45,7 +45,10 @@ export class ShellHost {
   private readonly _rotate: RotateGate | null;
   private readonly _joysticksView: JoysticksView | null;
   private readonly _hub: InputHub;
+  private readonly _axisSink: (dirX: number, dirZ: number) => void;
   private readonly _pairing: PairingOverlay;
+  /** Gate des axes : ouvert seulement en jeu hors portrait (le hub, lui, tourne dès le title). */
+  private _axesOpen = false;
   private _portrait = false;
   private _lastState: string | null = null;
   private _inGame = false;
@@ -64,7 +67,15 @@ export class ShellHost {
     this._joysticksView = opts.usesTouchInput ? new JoysticksView(this._root, opts.onStart) : null;
     // Hub d'input (manette + tactile) construit autour du sink — la vue existe déjà, donc la
     // TouchSource peut être branchée. Même câblage sur les deux hosts (voir boot/input).
-    this._hub = setupInput({ axisSink: opts.axisSink, joysticksView: this._joysticksView });
+    // Les axes traversent un gate : le hub tourne dès le title (pour voir les boutons manette,
+    // ex. Cross/Share → PLAY) mais aucun axe ne part vers SAB/RTC hors jeu (pas de trafic fantôme).
+    this._axisSink = opts.axisSink;
+    this._hub = setupInput({
+      axisSink: (dirX, dirZ) => {
+        if (this._axesOpen) this._axisSink(dirX, dirZ);
+      },
+      joysticksView: this._joysticksView,
+    });
     this._pairing = new PairingOverlay(this._root, {
       ...opts.pairing,
       onClose: () => appOrchestrator.send({ type: 'CLOSE_PAIRING' }),
@@ -80,6 +91,10 @@ export class ShellHost {
       this._pairing.setActive(this._pairingOpen);
       this._sync();
     });
+
+    // Sync initial : le hub doit tourner dès le boot (title inclus) sans attendre une première
+    // transition d'AppState — sinon un Cross/Share au title ne serait jamais vu.
+    this._sync();
   }
 
   /** Le hub d'input construit par ce shell — exposé pour que `initDev` y branche des sources dev. */
@@ -116,16 +131,21 @@ export class ShellHost {
   private _sync(): void {
     // Gate d'orientation : portrait + en jeu.
     this._rotate?.setActive(this._portrait && this._inGame);
-    // L'input coule en jeu, sauf en portrait (soft-pause mobile). Le hub possède la boucle rAF ;
-    // son stop émet des axes nuls (pas d'axes fantômes à la reprise). La surface tactile n'écoute
+    // Les AXES coulent en jeu, sauf en portrait (soft-pause mobile). La surface tactile n'écoute
     // les pointeurs que quand elle est active.
-    const inputActive = this._inGame && !this._portrait;
-    this._joysticksView?.setActive(inputActive);
+    const axesOpen = this._inGame && !this._portrait;
+    this._joysticksView?.setActive(axesOpen);
     // START : mode controller, tant qu'on n'est ni en jeu ni sous l'overlay de pairing (il
     // transparaîtrait à travers le panneau à 97 % d'opacité).
     this._joysticksView?.showStart(this._controllerMode && !this._inGame && !this._pairingOpen);
-    if (inputActive) this._hub.start();
-    else this._hub.stop();
+    // Fermeture du gate (quit, transfert, passage portrait) : un dernier recentrage part vers le
+    // transport AVANT de bloquer — sinon les derniers axes non nuls resteraient dans le SAB/RTC.
+    if (this._axesOpen && !axesOpen) this._axisSink(0, 0);
+    this._axesOpen = axesOpen;
+    // Le hub, lui, tourne hors jeu aussi (boutons manette au title : Cross/Share → PLAY) ; il ne
+    // s'arrête qu'en portrait (soft-pause complet). Son stop émet des axes nuls — gatés si fermé.
+    if (this._portrait) this._hub.stop();
+    else this._hub.start();
   }
 }
 

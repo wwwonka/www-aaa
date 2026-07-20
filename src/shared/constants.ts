@@ -39,9 +39,14 @@ export const SNAPSHOT_CONTROL_BYTES = 20; // f32×3 targetPosition | f32×2 move
 export const SNAPSHOT_BOID_BYTES = 32; // pos f32×3 | vel f32×3 | heading f32×2
 export const SNAPSHOT_PROP_BYTES = 52; // pos f32×3 | quat f32×4 | linVel f32×3 | angVel f32×3
 
-// ActionIds numériques du ring — réservés (aucun producteur avant les moves de l'étape 5+).
+// ActionIds numériques — DASH/SPLIT réservés au ring sim (aucun producteur avant les moves de
+// l'étape 5+) ; CONFIRM (valider/start) et MENU (pause/reprise) sont des signaux UI consommés par
+// le FSM main-thread, jamais poussés dans le ring. Dans `ControllerFrame.actions`, un ActionId
+// occupe le bit `1 << id`.
 export const ACTION_ID = {
   DASH: 1,
   SPLIT: 2,
+  CONFIRM: 3,
+  MENU: 4,
 } as const;
 export type ActionId = (typeof ACTION_ID)[keyof typeof ACTION_ID];
