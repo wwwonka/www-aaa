@@ -93,8 +93,8 @@ export interface PairingChannelOptions {
 export interface PairingChannel {
   /** Receiver uniquement : demande la connexion au peer cliqué — il répondra par `paired`. */
   requestConnect(peerId: string): void;
-  /** Propage le lancement de partie au peer pairé. */
-  sendStart(): void;
+  /** Propage le lancement de partie au peer pairé — jamais un broadcast, `peerId` cible explicitement lui seul. */
+  sendStart(peerId: string): void;
   /** Envoie un payload input binaire au peer pairé. */
   sendInput(payload: Uint8Array, peerId: string): void;
   /** Demande l'autorité au peer pairé (protocole de handoff §B.2). */

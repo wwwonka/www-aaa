@@ -127,11 +127,13 @@ export function createAssetsManager(): AssetsManagerApi {
           }
           completed++;
           onEvent({ type: 'progress', path: entry.path, loaded: completed, total: toLoad.length });
+          // Retiré du pending seulement sur succès : `criticalReady` ne doit résoudre que quand
+          // TOUS les assets critiques sont réellement en cache — un échec laisse son path en
+          // attente (pas de faux « ready »), voir le contrat documenté sur {@link criticalReady}.
+          pendingSet.delete(entry.path);
         } catch (error) {
           onEvent({ type: 'error', path: entry.path, error: String(error) });
         }
-
-        pendingSet.delete(entry.path);
       }),
     );
 

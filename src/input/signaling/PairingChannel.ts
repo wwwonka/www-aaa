@@ -123,8 +123,8 @@ export function createTrysteroPairingChannel(options: PairingChannelOptions): Pa
     requestConnect(peerId: string): void {
       void connect.send(null, { target: peerId });
     },
-    sendStart(): void {
-      void start.send(null);
+    sendStart(peerId: string): void {
+      void start.send(null, { target: peerId });
     },
     sendInput(payload: Uint8Array, peerId: string): void {
       void input.send(payload, { target: peerId });

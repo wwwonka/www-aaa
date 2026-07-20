@@ -231,7 +231,10 @@ export function setupPairingHost(options: PairingHostOptions): PairingHost {
   }
 
   return {
-    notifyLocalPlay: (): void => channel?.sendStart(),
+    notifyLocalPlay: (): void => {
+      const pid = pairedPeerId();
+      if (pid !== null) channel?.sendStart(pid);
+    },
     retry: (): void => actor.send({ type: 'RETRY' }),
     joinAsController: (code: string): void => {
       // Bascule runtime : ce mobile (receiver au boot) devient controller et rejoint la room

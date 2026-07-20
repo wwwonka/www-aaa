@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createReversalWave } from '../../../src/sim/ReversalWave';
 import type { ReversalWave } from '../../../src/sim/ReversalWave';
+import { SIM_STEP_MS } from '../../../src/shared/config';
 
 const DT = 1 / 60;
 
@@ -86,6 +87,33 @@ describe('ReversalWave — onde de propagation', () => {
     for (let i = 0; i < 5; i++) wave.advance(DT);
     expect(wave.waveActive).toBe(false);
     expect(wave.isBoidOnOldTarget(2)).toBe(false);
+  });
+
+  it('immédiatement après trigger() (avant tout advance()), l\'onde est déjà observable active — un banc ultra compact peut avoir tous les délais à 0', () => {
+    // Golden test : GameSim.stepOnce() doit lire `waveActive`/`isBoidOnOldTarget` (via
+    // `steering.compute`) AVANT d'appeler `reversal.advance(dtSec)` pour ce même step — sinon un
+    // banc assez compact pour que son délai max tienne dans un seul frame verrait l'onde s'éteindre
+    // dans son propre `advance()` sans jamais avoir été vue par le steering (régression 2026-07-20).
+    const wave = createReversalWave(2);
+    const positions = positionsOf([[0, -5], [0, -5]]); // les deux boids déjà sur le nouveau front
+    wave.trigger(positions, 2, 0, -5, 0, 20);
+
+    expect(wave.waveActive).toBe(true);
+    expect(wave.isBoidOnOldTarget(0)).toBe(false);
+    expect(wave.isBoidOnOldTarget(1)).toBe(false);
+  });
+
+  it('un banc compact PEUT s\'éteindre en un seul advance() au pas de sim réel — c\'est justement pourquoi l\'ordre trigger→lecture→advance est non négociable', () => {
+    const wave = createReversalWave(2);
+    // Rayon quasi nul (0.01) : au WAVE_SPEED réel, le délai max tient largement sous un seul
+    // SIM_STEP_MS — ce test documente le scénario exact où l'ancien ordre (advance() avant lecture)
+    // aurait masqué l'onde en entier pour ce step.
+    const positions = positionsOf([[0.005, -5], [-0.005, -5]]);
+    wave.trigger(positions, 2, 0, -5, 0, 20);
+    expect(wave.waveActive).toBe(true); // observable AVANT le premier advance() — c'est le contrat
+
+    wave.advance(SIM_STEP_MS / 1000);
+    expect(wave.waveActive).toBe(false); // et bien éteinte après — d'où l'exigence d'ordre côté GameSim
   });
 
   it('reset : onde abandonnée et détection ré-armée à neutre (cas restore de snapshot)', () => {

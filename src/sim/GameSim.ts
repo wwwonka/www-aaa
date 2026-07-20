@@ -193,7 +193,6 @@ export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
       targetPosition[2] = clampToArena(flock.centroidZ + (moveInput[1] / mag) * standoff);
       reversal.trigger(positions, BOID_COUNT, targetPosition[0], targetPosition[2], oldX, oldZ);
     }
-    reversal.advance(dtSec);
 
     readAllPositions();
     const invDt = 1 / dtSec;
@@ -215,6 +214,11 @@ export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
       physics.applyForce(boidHandles[i], forces[i * 3], 0, forces[i * 3 + 2], dtSec);
     }
     physics.step(dtSec);
+
+    // Avancée APRÈS que ce step ait lu `waveActive`/`isBoidOnOldTarget` dans `compute()` ci-dessus
+    // — sinon une onde déclenchée ce step pourrait s'éteindre dans son propre `advance()` avant
+    // d'avoir jamais été vue par le steering (banc compact / WAVE_SPEED élevée).
+    reversal.advance(dtSec);
   };
 
   // Snapshot de handoff (§B.3) — layout binaire isolé dans snapshot.ts, GameSim n'expose
