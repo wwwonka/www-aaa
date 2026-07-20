@@ -13,10 +13,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
+  // Artefacts de run (traces/screenshots/vidéos + JSON) sous `tests/`, avec le reste des tests —
+  // pas à la racine du dépôt.
+  outputDir: './tests/_test_results',
   reporter: [
     ['line'],
     ['html', { open: 'never', outputFolder: '_dev/playwright-report' }],
-    ['json', { outputFile: 'test-results/playwright-results.json' }],
+    ['json', { outputFile: 'tests/_test_results/playwright-results.json' }],
   ],
   use: {
     baseURL,
