@@ -22,6 +22,12 @@ export interface InputHubOptions {
    * SAB local si ce device est l'autorité, sinon envoie en RTC au peer pairé. Le hub l'ignore.
    */
   readonly axisSink: (dirX: number, dirZ: number) => void;
+  /**
+   * Sink des actions discrètes (`ActionId`), appelé une fois par **front montant** (pression, pas
+   * maintien). Contrairement aux axes, les actions ne passent pas par l'arbitrage : l'union de
+   * toutes les sources est écoutée (un bouton manette compte même si le tactile possède les axes).
+   */
+  readonly actionSink?: (actionId: number) => void;
 }
 
 /** État d'arbitrage tenu par le hub pour une source. */
@@ -42,6 +48,7 @@ interface SourceSlot {
  */
 export class InputHub {
   private readonly _axisSink: (x: number, z: number) => void;
+  private readonly _actionSink: ((actionId: number) => void) | null;
   private readonly _slots: SourceSlot[] = [];
 
   private _running = false;
@@ -52,9 +59,12 @@ export class InputHub {
   private _engageCounter = 0;
   private _lastQx = 0;
   private _lastQz = 0;
+  /** Bitset d'actions du tick précédent (toutes sources confondues) — base de l'edge-detection. */
+  private _prevActions = 0;
 
   constructor(opts: InputHubOptions) {
     this._axisSink = opts.axisSink;
+    this._actionSink = opts.actionSink ?? null;
   }
 
   /** Enregistre une source. Si le hub tourne déjà, la démarre aussitôt. */
@@ -83,6 +93,7 @@ export class InputHub {
       slot.source.stop();
       slot.active = false;
     }
+    this._prevActions = 0; // pas de latch périmé : une action tenue au stop re-frontera à la reprise
     this._forceEmit(0, 0);
   }
 
@@ -102,9 +113,11 @@ export class InputHub {
   private _sampleAndEmit(): void {
     let owner: SourceSlot | null = null;
     let ownerFrame: ControllerFrame | null = null;
+    let actionsNow = 0;
 
     for (const slot of this._slots) {
       const frame = slot.source.poll();
+      if (frame !== null) actionsNow |= frame.actions; // union : les actions ignorent l'arbitrage
       const active = frame !== null && isControllerFrameActive(frame);
       // Nouvelle prise en main (neutre→actif) → engagement le plus récent.
       if (active && !slot.active) slot.engagedAt = ++this._engageCounter;
@@ -115,12 +128,24 @@ export class InputHub {
       }
     }
 
+    this._emitActionEdges(actionsNow);
+
     if (ownerFrame === null) {
       this._maybeEmit(0, 0); // aucune source active → recentrage
       return;
     }
     const reduced = reduceSticks(ownerFrame.leftStick, ownerFrame.rightStick);
     this._maybeEmit(reduced.x, reduced.z);
+  }
+
+  /** Émet chaque `ActionId` en front montant (bit levé ce tick, pas au précédent), une seule fois. */
+  private _emitActionEdges(actionsNow: number): void {
+    const rising = actionsNow & ~this._prevActions;
+    this._prevActions = actionsNow;
+    if (rising === 0 || this._actionSink === null) return;
+    for (let actionId = 0; actionId < 32; actionId++) {
+      if ((rising & (1 << actionId)) !== 0) this._actionSink(actionId);
+    }
   }
 
   /** Émet si la valeur quantifiée a changé, ou si le keepalive est échu. */

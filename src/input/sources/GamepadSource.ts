@@ -2,14 +2,26 @@
 // stick gauche, 2/3 = stick droit, positions fixes identiques DS4 / Xbox / Joy-Con…), jamais une
 // table par marque. La Gamepad API n'a pas d'events de valeur : on *poll* `getGamepads()` une fois
 // par tick (via l'InputHub). Park-on-connect : sans manette branchée, `poll()` ne fait rien.
-// Passe « sticks d'abord » : les boutons ne sont pas encore lus (voir le plan §Séquences).
+// Boutons : traduits en `ActionId` abstraits dans `frame.actions` (voir BUTTON_TO_ACTION) — seul
+// fichier autorisé à connaître des index de boutons physiques.
 
 import type { InputSource } from './InputSource';
 import { createControllerFrame, type ControllerFrame } from '../ControllerFrame';
 import { radialDeadzone } from '../math/deadzone';
+import { ACTION_ID } from '../../shared/constants';
 
 // Les sticks manette dérivent au repos (surtout usés) → deadzone un peu plus large que le tactile.
 const GAMEPAD_DEADZONE = 0.12;
+
+// Mapping W3C « standard » → ActionId : buttons[0] = Cross/A → CONFIRM. MENU écoute tout le
+// cluster système : 8 (Select/Share selon UA), 9 (Share constaté sur DS4 réelle ; Options/Start
+// ailleurs — pause aussi, conventionnel), 17 (clic touchpad DS4). DASH/SPLIT viendront.
+const BUTTON_TO_ACTION: ReadonlyArray<readonly [buttonIndex: number, actionId: number]> = [
+  [0, ACTION_ID.CONFIRM],
+  [8, ACTION_ID.MENU],
+  [9, ACTION_ID.MENU],
+  [17, ACTION_ID.MENU],
+];
 
 export class GamepadSource implements InputSource {
   readonly kind = 'gamepad';
@@ -60,6 +72,12 @@ export class GamepadSource implements InputSource {
     this._frame.leftStick.z = -left.y;
     this._frame.rightStick.x = right.x;
     this._frame.rightStick.z = -right.y;
+    // Boutons → bitset d'actions, état niveau brut (`?.` : tableaux courts/creux selon manette).
+    let actions = 0;
+    for (const [buttonIndex, actionId] of BUTTON_TO_ACTION) {
+      if (pad.buttons[buttonIndex]?.pressed === true) actions |= 1 << actionId;
+    }
+    this._frame.actions = actions;
     return this._frame;
   }
 

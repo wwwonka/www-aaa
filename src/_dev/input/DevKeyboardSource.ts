@@ -1,4 +1,5 @@
-// Source d'input DEV — clavier WASD/flèches → stick gauche. Miroir de `src/input/sources/` mais dans
+// Source d'input DEV — clavier WASD/flèches → les DEUX sticks (même direction : la locomotion
+// exige deux sticks actifs, le clavier émule deux pouces parallèles). Miroir de `src/input/sources/` mais dans
 // `_dev/` : le jeu ne se contrôle PAS au clavier en prod (vision console-sur-web). Enregistrée dans le
 // hub uniquement via `initDev` (`?dev`), jamais par le pipeline prod. Reprend la logique de l'ancien
 // `attachKeyboardSimControls`, mais en `InputSource` : elle emprunte le même hub → SAB que la manette.
@@ -56,6 +57,8 @@ export class DevKeyboardSource implements InputSource {
     }
     this._frame.leftStick.x = x;
     this._frame.leftStick.z = z;
+    this._frame.rightStick.x = x;
+    this._frame.rightStick.z = z;
     return this._frame;
   }
 }

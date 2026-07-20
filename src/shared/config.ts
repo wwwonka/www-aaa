@@ -20,6 +20,16 @@ export const WALL_HEIGHT = 4; // hauteur des murs invisibles de confinement
 export const TARGET_SPEED = 6.0; // vitesse de déplacement de la sphère de contrôle (unités/s)
 export const SIM_STEP_MS = 1000 / 60; // timestep fixe de la simulation
 
+// ─── Demi-tour intentionnel (inversion des 2 sticks) — voir sim/ReversalWave ─
+
+export const REVERSAL_ANGLE_COS = -0.7; // seuil ~135° entre direction soutenue et nouvelle
+export const REVERSAL_MIN_INPUT_MAG = 0.5; // magnitude minimale pour qualifier l'intention
+export const REVERSAL_SMOOTH_TAU_MS = 250; // lissage de la direction « soutenue » (survit au neutre)
+export const REVERSAL_COOLDOWN_MS = 400; // pas de re-déclenchement en rafale
+export const REVERSAL_STANDOFF = 2.0; // marge au-delà du rayon du flock pour la sphère téléportée
+export const REVERSAL_WAVE_SPEED = 30; // vitesse de propagation de l'onde à travers le banc (unités/s)
+export const REVERSAL_WAVE_MAX_DELAY_SEC = 0.4; // clamp du délai du boid le plus lointain
+
 /** Props poussables — masse >> boids pour une poussée visible mais pas triviale (brief §4). */
 export const PROP_DEFS: readonly {
   readonly halfExtents: readonly [number, number, number];

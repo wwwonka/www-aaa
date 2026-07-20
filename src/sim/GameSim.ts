@@ -11,6 +11,7 @@ import {
   TARGET_SPEED,
   SIM_STEP_MS,
   PROP_DEFS,
+  REVERSAL_STANDOFF,
 } from '../shared/config';
 import {
   SAB_BOID_STRIDE,
@@ -27,6 +28,8 @@ import { createSAB } from '../core/sab-manager';
 import { PhysicsEngine } from './PhysicsEngine';
 import type { BodyHandle } from './PhysicsEngine';
 import { createBoidSimulation } from './BoidSimulation';
+import { createFlockAggregate } from './FlockAggregate';
+import { createReversalWave } from './ReversalWave';
 import { captureSnapshot, restoreSnapshot } from './snapshot';
 import type { SimSnapshotState } from './snapshot';
 
@@ -92,6 +95,10 @@ export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
   );
 
   const steering = createBoidSimulation(BOID_COUNT, ARENA_HALF_EXTENT);
+  // Flock-comme-entité + demi-tour intentionnel : détection sur le moveInput réduit (agnostique
+  // de la source), téléport de la sphère au nouveau front, onde de bascule à travers le banc.
+  const flock = createFlockAggregate();
+  const reversal = createReversalWave(BOID_COUNT);
   const positions = new Float32Array(BOID_COUNT * 3);
   const prevPositions = new Float32Array(BOID_COUNT * 3);
   const velocities = new Float32Array(BOID_COUNT * 3);
@@ -163,15 +170,30 @@ export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
     moveInput[1] = Atomics.load(controlView, CTRL_AXIS_Z) / CTRL_FIXED_POINT;
   };
 
+  const clampToArena = (v: number): number => {
+    const limit = ARENA_HALF_EXTENT - 1;
+    return v > limit ? limit : v < -limit ? -limit : v;
+  };
+
   const stepOnce = (dtSec: number): void => {
     drainControl();
-    targetPosition[0] += moveInput[0] * TARGET_SPEED * dtSec;
-    targetPosition[2] += moveInput[1] * TARGET_SPEED * dtSec;
-    const limit = ARENA_HALF_EXTENT - 1;
-    if (targetPosition[0] > limit) targetPosition[0] = limit;
-    else if (targetPosition[0] < -limit) targetPosition[0] = -limit;
-    if (targetPosition[2] > limit) targetPosition[2] = limit;
-    else if (targetPosition[2] < -limit) targetPosition[2] = -limit;
+    targetPosition[0] = clampToArena(targetPosition[0] + moveInput[0] * TARGET_SPEED * dtSec);
+    targetPosition[2] = clampToArena(targetPosition[2] + moveInput[1] * TARGET_SPEED * dtSec);
+
+    // Demi-tour intentionnel : agrégat du banc (positions du step précédent — suffisant), puis
+    // sur inversion franche des sticks, la sphère SAUTE au nouveau front (centroïde + rayon +
+    // marge, direction de l'input) et l'onde de bascule est armée depuis ce nouveau « bec ».
+    flock.update(positions, BOID_COUNT, velocities);
+    if (reversal.detect(moveInput[0], moveInput[1], dtSec)) {
+      const oldX = targetPosition[0];
+      const oldZ = targetPosition[2];
+      const mag = Math.hypot(moveInput[0], moveInput[1]); // ≥ REVERSAL_MIN_INPUT_MAG (detect)
+      const standoff = flock.radius + REVERSAL_STANDOFF;
+      targetPosition[0] = clampToArena(flock.centroidX + (moveInput[0] / mag) * standoff);
+      targetPosition[2] = clampToArena(flock.centroidZ + (moveInput[1] / mag) * standoff);
+      reversal.trigger(positions, BOID_COUNT, targetPosition[0], targetPosition[2], oldX, oldZ);
+    }
+    reversal.advance(dtSec);
 
     readAllPositions();
     const invDt = 1 / dtSec;
@@ -187,6 +209,7 @@ export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
       targetPosition[0],
       targetPosition[2],
       forces,
+      reversal.waveActive ? reversal : null,
     );
     for (let i = 0; i < BOID_COUNT; i++) {
       physics.applyForce(boidHandles[i], forces[i * 3], 0, forces[i * 3 + 2], dtSec);
@@ -238,7 +261,12 @@ export async function createGameSim(controlView: Int32Array): Promise<GameSim> {
       if (steps > 0) writeMatrices();
     },
     captureSnapshot: () => captureSnapshot(snapshotState),
-    restoreSnapshot: (buf) => restoreSnapshot(buf, snapshotState),
+    restoreSnapshot: (buf) => {
+      restoreSnapshot(buf, snapshotState);
+      // État détection/onde volontairement éphémère (hors layout snapshot §B.3) : un handoff en
+      // pleine inversion abandonne juste l'onde en cours — bénin.
+      reversal.reset();
+    },
     dispose(): void {
       physics.dispose();
     },

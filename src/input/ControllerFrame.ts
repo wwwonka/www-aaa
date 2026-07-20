@@ -21,9 +21,10 @@ export interface ControllerFrame {
   readonly leftStick: StickVector;
   readonly rightStick: StickVector;
   /**
-   * Actions discrètes pressées (dash, split…) sous forme de bitset d'`ActionId`.
-   * **RÉSERVÉ** — non peuplé pour l'instant (passe « sticks d'abord »). Voir le plan
-   * `docs/plans/input-system-agnostic.md` §Séquences pour le chemin actions à venir.
+   * Actions discrètes pressées, sous forme de bitset d'`ActionId` (bit `1 << id`). État **brut**
+   * niveau (pressé/relâché) : l'edge-detection (front montant) vit dans l'InputHub, pas ici.
+   * Peuplé aujourd'hui : `CONFIRM` (GamepadSource). À venir : dash/split (voir le plan
+   * `docs/plans/input-system-agnostic.md` §Séquences).
    */
   actions: number;
 }
